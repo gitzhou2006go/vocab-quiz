@@ -89,24 +89,26 @@ function getDictName(dictId) {
   return d ? d.name : '未知词库'
 }
 
-// 朗读（双保险：Web Speech API + Google TTS 降级）
+// 朗读（Web Speech API + Google TTS 兜底）
 function speak(word) {
   if (!word) return
-  // 1) 优先用 Web Speech API（桌面端质量好、可离线）
+  // 优先用 Web Speech API（内置、免费、质量好）
   if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel() // iOS 必须 cancel 再 speak，否则不发声
+    window.speechSynthesis.cancel() // iOS 必须 cancel 再 speak，否则静音
     const u = new SpeechSynthesisUtterance(word)
     u.lang = 'en-US'
     u.rate = 0.9
     u.pitch = 1.0
-    // iOS Safari bug: onend 空回调 + 用 setTimeout 确保生效
-    u.onend = () => {}
-    u.onerror = () => fallbackSpeak(word)
-    // iOS 需要离开当前事件循环才能触发
-    setTimeout(() => window.speechSynthesis.speak(u), 50)
+    u.onend = () => {} // iOS 需要非空回调
+    u.onerror = (e) => {
+      console.warn('SpeechSynthesis error', e.error)
+      fallbackSpeak(word)
+    }
+    // ✔ 同步触发（不 setTimeout），Android Chrome 要求手势同步上下文
+    window.speechSynthesis.speak(u)
     return
   }
-  // 2) 降级 Google Translate TTS（移动端兼容性更好）
+  // 降级：Google TTS（部分网络环境下被拦截）
   fallbackSpeak(word)
 }
 
