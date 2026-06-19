@@ -31,7 +31,7 @@ const showNav = computed(() => !route.path.startsWith('/quiz'))
 </script>
 
 <style>
-/* ===== iOS Design System ===== */
+/* ===== iPad Design System ===== */
 :root {
   --primary: #007AFF;
   --primary-light: #E8F0FE;
@@ -43,7 +43,7 @@ const showNav = computed(() => !route.path.startsWith('/quiz'))
   --text-primary: #1C1C1E;
   --text-secondary: #8E8E93;
   --text-muted: #C7C7CC;
-  --radius: 12px;
+  --radius: 14px;
   --radius-pill: 999px;
   --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
@@ -64,74 +64,58 @@ body {
 
 #app {
   min-height: 100vh;
-  padding-bottom: 82px;
-  max-width: 480px;
+  padding-bottom: 90px;
+  max-width: 820px;
   margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
-/* iPad / 大屏适配 */
-@media (min-width: 640px) {
-  #app {
-    max-width: 85vw;
-    padding: 0 24px 82px;
-  }
-  .page { padding: 24px; }
-  h2.page-title { font-size: 1.8rem; }
-}
-
-@media (min-width: 900px) {
-  #app { max-width: 780px; }
-}
-
-/* ===== Tab Bar (iOS style) ===== */
+/* ===== Tab Bar ===== */
 .tab-bar {
   position: fixed;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 480px;
+  max-width: 820px;
   display: flex;
   background: rgba(255,255,255,0.94);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border-top: 0.5px solid rgba(0,0,0,0.1);
   z-index: 100;
   padding-bottom: var(--safe-bottom);
+  border-radius: 16px 16px 0 0;
 }
-
 .tab-item {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 6px 0 4px;
+  padding: 12px 0 8px;
   text-decoration: none;
   color: var(--text-secondary);
   transition: color 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
-
-.tab-icon { font-size: 1.4rem; line-height: 1.4; }
-.tab-label { font-size: 0.65rem; font-weight: 500; letter-spacing: 0.01em; }
-
+.tab-icon { font-size: 1.6rem; line-height: 1.4; }
+.tab-label { font-size: 0.75rem; font-weight: 500; margin-top: 2px; }
 .tab-active { color: var(--primary); }
-.tab-active .tab-icon { transform: scale(1.05); }
 
 /* ===== Shared Components ===== */
-.page { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.page { padding: 28px 8px; display: flex; flex-direction: column; gap: 16px; }
 
 h2.page-title {
-  font-size: 1.6rem;
+  font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  padding: 8px 0 4px;
+  padding: 14px 0 6px;
 }
 
 .card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 20px;
   box-shadow: var(--shadow);
 }
 
@@ -155,12 +139,12 @@ h2.page-title {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 12px 20px;
+  gap: 8px;
+  padding: 14px 28px;
   border: none;
   border-radius: var(--radius-pill);
   font-family: var(--font);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -169,7 +153,6 @@ h2.page-title {
 }
 .btn:active { transform: scale(0.97); opacity: 0.85; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
 .btn-primary { background: var(--primary); color: white; }
 .btn-secondary { background: var(--bg); color: var(--primary); }
 .btn-danger { background: var(--danger); color: white; }
@@ -177,41 +160,36 @@ h2.page-title {
 
 .pill-tag {
   display: inline-block;
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  padding: 2px 10px;
+  padding: 4px 14px;
   border-radius: var(--radius-pill);
   background: var(--primary-light);
   color: var(--primary);
 }
 
-.success-tag {
-  background: #E8F8E8;
-  color: var(--success);
-}
-
 .progress-bar-bg {
-  height: 6px;
+  height: 8px;
   background: #E8E8ED;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
 }
 .progress-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--primary), #5AC8FA);
-  border-radius: 6px;
+  border-radius: 8px;
   transition: width 0.3s ease;
 }
 
 .empty-state {
   text-align: center;
-  padding: 48px 20px;
+  padding: 60px 20px;
   color: var(--text-secondary);
 }
-.empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
-.empty-state p { font-size: 0.9rem; margin-bottom: 16px; }
+.empty-state .empty-icon { font-size: 3.5rem; margin-bottom: 16px; }
+.empty-state p { font-size: 1rem; margin-bottom: 20px; }
 
-.text-muted { color: var(--text-muted); font-size: 0.78rem; }
+.text-muted { color: var(--text-muted); font-size: 0.82rem; }
 .text-secondary { color: var(--text-secondary); }
 </style>
 

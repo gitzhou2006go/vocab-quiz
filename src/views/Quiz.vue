@@ -2,14 +2,14 @@
   <div class="quiz-page">
     <!-- 顶部进度 -->
     <div v-if="round" class="progress-card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="font-weight:600;font-size:0.85rem;flex:1">{{ round.name }}</span>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-weight:600;font-size:1rem;flex:1">{{ round.name }}</span>
         <span class="pill-tag">{{ getDictName(round.dictId) }}</span>
       </div>
       <div class="progress-bar-bg">
         <div class="progress-bar-fill" :style="{ width: progressPercent + '%' }"></div>
       </div>
-      <div style="text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-top:6px">
+      <div style="text-align:center;font-size:0.88rem;color:var(--text-secondary);margin-top:8px">
         {{ completedCount }} / {{ round.totalWords }}
       </div>
     </div>
@@ -240,24 +240,24 @@ watch(() => route.params.id, loadRound)
 
 <style scoped>
 .quiz-page {
-  padding: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 8px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   min-height: 100vh;
   animation: fadeIn 0.3s ease;
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-/* progress card */
 .progress-card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  padding: 14px 16px;
+  padding: 18px 20px;
   box-shadow: var(--shadow);
 }
 
-/* word card */
 .word-card {
   flex: 1;
   display: flex;
@@ -265,44 +265,45 @@ watch(() => route.params.id, loadRound)
   justify-content: center;
   align-items: center;
   background: var(--card-bg);
-  border-radius: 16px;
-  padding: 32px 24px;
+  border-radius: 20px;
+  padding: 48px 40px;
   box-shadow: var(--shadow);
-  gap: 20px;
+  gap: 28px;
 }
 
 .word-main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
 }
 .word-title-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
 }
 .word-en {
-  font-size: 2rem;
+  font-size: 3rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   word-break: break-word;
   text-align: center;
+  line-height: 1.3;
 }
 .word-author {
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--text-secondary);
   font-weight: 400;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .speak-btn {
   background: var(--primary-light);
   border: none;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -316,10 +317,10 @@ watch(() => route.params.id, loadRound)
 .speak-btn:active { transform: scale(0.9); background: #D0E3FF; }
 
 .zh-toggle {
-  padding: 10px 20px;
+  padding: 12px 28px;
   border: 1.5px dashed #C7C7CC;
   border-radius: var(--radius-pill);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   color: var(--text-secondary);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -330,19 +331,20 @@ watch(() => route.params.id, loadRound)
 .zh-visible {
   width: 100%;
   text-align: center;
-  padding: 16px;
+  padding: 24px;
   background: var(--bg);
   border-radius: var(--radius);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.zh-visible > span:first-child { font-size: 1.1rem; color: var(--text-primary); display: block; }
-.zh-hint { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; }
+.zh-visible > span:first-child { font-size: 1.3rem; color: var(--text-primary); display: block; line-height: 1.6; }
+.zh-hint { display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
 
 .actions {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
+  max-width: 500px;
 }
 
 .btn-known {
@@ -350,9 +352,9 @@ watch(() => route.params.id, loadRound)
   background: var(--primary);
   color: white;
   border: none;
-  padding: 14px;
+  padding: 18px;
   border-radius: var(--radius-pill);
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -365,9 +367,9 @@ watch(() => route.params.id, loadRound)
   background: transparent;
   color: var(--danger);
   border: 1.5px solid var(--danger);
-  padding: 14px;
+  padding: 18px;
   border-radius: var(--radius-pill);
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -375,7 +377,6 @@ watch(() => route.params.id, loadRound)
 }
 .btn-unknown:active { transform: scale(0.97); background: #FFF0EF; }
 
-/* done card */
 .done-card {
   flex: 1;
   display: flex;
@@ -383,33 +384,34 @@ watch(() => route.params.id, loadRound)
   align-items: center;
   justify-content: center;
   background: var(--card-bg);
-  border-radius: 16px;
-  padding: 40px 24px;
+  border-radius: 20px;
+  padding: 56px 40px;
   box-shadow: var(--shadow);
 }
+.done-card h3 { font-size: 1.6rem; margin-bottom: 24px; }
 .done-stats {
   display: flex;
   align-items: center;
-  gap: 24px;
-  margin-bottom: 16px;
+  gap: 32px;
+  margin-bottom: 20px;
 }
 .done-stat { text-align: center; }
+.done-stat .stat-num { font-size: 2.5rem; font-weight: 700; }
 .done-divider {
   width: 1px;
-  height: 48px;
+  height: 56px;
   background: #E8E8ED;
 }
 
-/* toast */
 .toast {
   position: fixed;
-  top: 20px;
+  top: 24px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 999;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border-radius: var(--radius-pill);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 500;
   animation: slideDown 0.3s ease;
   max-width: 90%;
@@ -420,22 +422,4 @@ watch(() => route.params.id, loadRound)
 .toast.success { background: #E8F8E8; color: #34C759; }
 .toast.error { background: #FEF0F0; color: #FF3B30; }
 @keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
-
-/* iPad / 大屏适配 */
-@media (min-width: 640px) {
-  .quiz-page { gap: 24px; }
-  .word-en { font-size: 2.8rem; }
-  .word-author { font-size: 1rem; }
-  .word-card { padding: 48px 40px; border-radius: 20px; gap: 28px; }
-  .zh-visible { padding: 24px; }
-  .zh-visible > span:first-child { font-size: 1.3rem; }
-  .btn-known, .btn-unknown { padding: 16px; font-size: 1rem; }
-  .done-card { padding: 56px 40px; border-radius: 20px; }
-  .done-card h3 { font-size: 1.5rem; }
-}
-@media (min-width: 900px) {
-  .word-en { font-size: 3.2rem; }
-  .word-card { padding: 56px 48px; }
-  .btn-known, .btn-unknown { padding: 18px; font-size: 1.1rem; }
-}
 </style>
