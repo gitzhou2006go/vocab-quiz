@@ -1,74 +1,84 @@
 <template>
-  <div class="quiz">
+  <div class="quiz-page">
     <!-- 顶部进度 -->
-    <div v-if="round" class="quiz-header card">
-      <div class="quiz-meta">
-        <span class="round-name">{{ round.name }}</span>
-        <span class="dict-tag">{{ getDictName(round.dictId) }}</span>
+    <div v-if="round" class="progress-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-weight:600;font-size:0.85rem;flex:1">{{ round.name }}</span>
+        <span class="pill-tag">{{ getDictName(round.dictId) }}</span>
       </div>
       <div class="progress-bar-bg">
         <div class="progress-bar-fill" :style="{ width: progressPercent + '%' }"></div>
       </div>
-      <div class="progress-stats">
-        <span>{{ completedCount }} / {{ round.totalWords }}</span>
-        <span>{{ progressPercent }}%</span>
+      <div style="text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-top:6px">
+        {{ completedCount }} / {{ round.totalWords }}
       </div>
     </div>
 
     <!-- 答题卡片 -->
-    <div v-if="currentWord && round" class="word-card card">
-      <div class="word-en-row">
+    <div v-if="currentWord && round" class="word-card">
+      <div class="word-main">
         <div class="word-en">{{ currentWord.en }}</div>
-        <button class="speak-btn" title="朗读" @click="speak(currentWord.en)">🔊</button>
+        <button class="speak-btn" @click="speak(currentWord.en)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+        </button>
       </div>
-      <button v-if="!showZh" class="btn btn-outline btn-block" @click="showZh = true">
-        👁 看释义
-      </button>
-      <div v-else class="word-zh" @click="showZh = false">{{ currentWord.zh }} <span class="tap-hint">点击收起</span></div>
+
+      <div v-if="!showZh" class="zh-toggle" @click="showZh = true">
+        <span>👁 看释义</span>
+      </div>
+      <div v-else class="zh-visible" @click="showZh = false">
+        <span>{{ currentWord.zh }}</span>
+        <span class="zh-hint">轻点收起</span>
+      </div>
 
       <div class="actions">
-        <button class="btn btn-danger action-btn" @click="markUnknown">
-          ❌ 不认识
+        <button class="btn btn-unknown" @click="markUnknown">
+          <span style="font-size:0.82rem">✕</span> 不认识
         </button>
-        <button class="btn btn-success action-btn" @click="markKnown">
-          ✅ 认识
+        <button class="btn btn-known" @click="markKnown">
+          <span style="font-size:0.82rem">✓</span> 认识
         </button>
       </div>
     </div>
 
     <!-- 无进行中轮次 -->
-    <div v-else-if="!round" class="empty card">
-      <div class="empty-emoji">🤔</div>
+    <div v-else-if="!round" class="empty-state">
+      <div class="empty-icon">🤔</div>
       <p>没有进行中的轮次</p>
-      <button class="btn btn-primary" @click="$router.push('/')">去首页开一轮</button>
+      <button class="btn btn-primary btn-block" @click="$router.push('/')">去首页开一轮</button>
     </div>
 
     <!-- 本轮完成 -->
-    <div v-else class="done-card card">
-      <div class="done-emoji">🎉</div>
-      <h3>本轮完成！</h3>
+    <div v-else class="done-card">
+      <div style="font-size:3.5rem;margin-bottom:8px">🎉</div>
+      <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:20px">本轮完成！</h3>
       <div class="done-stats">
-        <div class="stat-item stat-known">
-          <span class="stat-num">{{ knownCount }}</span>
-          <span class="stat-label">认识</span>
+        <div class="done-stat">
+          <div style="font-size:2rem;font-weight:700;color:var(--success)">{{ knownCount }}</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary)">认识</div>
         </div>
-        <div class="stat-item stat-unknown">
-          <span class="stat-num">{{ unknownCount }}</span>
-          <span class="stat-label">不认识</span>
+        <div class="done-divider"></div>
+        <div class="done-stat">
+          <div style="font-size:2rem;font-weight:700;color:var(--danger)">{{ unknownCount }}</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary)">不认识</div>
         </div>
       </div>
-      <p class="done-tip" v-if="unknownCount > 0">
-        {{ unknownCount }} 个错词已记入错题本，下次可继续巩固
+      <p v-if="unknownCount > 0" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:20px">
+        {{ unknownCount }} 个错词已记入错题本
       </p>
-      <div class="done-actions">
-        <button class="btn btn-outline btn-block" @click="$router.push('/errors')">查看错题本</button>
-        <button class="btn btn-primary btn-block" @click="$router.push('/')">返回首页</button>
+      <div style="display:flex;flex-direction:column;gap:10px;width:100%">
+        <button class="btn btn-secondary btn-block" @click="$router.push('/errors')">📕 查看错题本</button>
+        <button class="btn btn-primary btn-block" @click="$router.push('/')">🏠 返回首页</button>
       </div>
     </div>
-  </div>
 
-  <!-- Toast 提示 -->
-  <div v-if="toastMsg" class="toast" :class="toastType">{{ toastMsg }}</div>
+    <!-- Toast -->
+    <div v-if="toastMsg" class="toast" :class="toastType">{{ toastMsg }}</div>
+  </div>
 </template>
 
 <script setup>
@@ -87,7 +97,7 @@ const showZh = ref(false)
 const knownCount = ref(0)
 const unknownCount = ref(0)
 const toastMsg = ref('')
-const toastType = ref('') // 'success' | 'error'
+const toastType = ref('')
 let toastTimer = null
 
 function showToast(msg, type = 'error') {
@@ -105,28 +115,20 @@ function getDictName(dictId) {
 const speaking = ref(false)
 let speechTimer = null
 
-// 朗读
 function speak(word) {
   if (!word) return
-
-  // 如果还在播就重置
   if (speaking.value) {
     window.speechSynthesis?.cancel()
     clearTimeout(speechTimer)
   }
-
   speaking.value = true
   showToast('🔊 播放中', 'success')
-
-  // 安全兜底：最多 4 秒后自动清除标志位
   clearTimeout(speechTimer)
   speechTimer = setTimeout(() => { speaking.value = false; showToast('') }, 4000)
 
-  // 方案一：Web Speech API（桌面端/部分安卓可用）
   if ('speechSynthesis' in window && window.speechSynthesis) {
     try {
       window.speechSynthesis.cancel()
-      // 部分安卓需要 getVoices 预热引擎
       try { window.speechSynthesis.getVoices() } catch (_) {}
       const u = new SpeechSynthesisUtterance(word)
       u.lang = 'en-US'
@@ -138,38 +140,28 @@ function speak(word) {
       return
     } catch (_) {}
   }
-
-  // 方案二：在线发音（国内可用：有道词典）
   fallbackSpeak(word)
 }
 
 function fallbackSpeak(word) {
   try {
-    // 有道词典美式发音（网易服务器，国内正常访问）
     const url = 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(word) + '&type=1'
     const audio = new Audio(url)
     audio.onended = () => { speaking.value = false; clearTimeout(speechTimer); showToast('') }
     audio.onerror = () => { showToast('⚠️ 语音不可用', 'error'); speaking.value = false; clearTimeout(speechTimer) }
     audio.play().catch(() => { showToast('⚠️ 语音不可用', 'error'); speaking.value = false; clearTimeout(speechTimer) })
   } catch (e) {
-    console.warn('TTS unavailable', e)
     showToast('⚠️ 语音不可用', 'error')
-    speaking.value = false
-    clearTimeout(speechTimer)
+    speaking.value = false; clearTimeout(speechTimer)
   }
 }
 
-// 取出当前要答的词
 function loadCurrent() {
   const pending = round.value?.pendingWordIds || []
-  if (pending.length === 0) {
-    currentWord.value = null
-    return
-  }
+  if (pending.length === 0) { currentWord.value = null; return }
   currentWord.value = WORD_MAP[pending[0]] || null
 }
 
-// 加载指定轮次（按路由 id 或当前进行中的轮次）
 async function loadRound() {
   const id = route.params.id
   if (id) {
@@ -180,7 +172,6 @@ async function loadRound() {
     round.value = store.activeRound
   }
   if (round.value && round.value.pendingWordIds?.length === 0) {
-    // 已经答完的轮次，直接展示完成页
     currentWord.value = null
   } else {
     loadCurrent()
@@ -197,45 +188,33 @@ const progressPercent = computed(() => {
   return Math.round((completedCount.value / round.value.totalWords) * 100)
 })
 
-const isFinished = computed(() => {
-  return round.value && (round.value.pendingWordIds?.length || 0) === 0
-})
-
-// 把当前词推进（认识 / 不认识 共用：移出 pending，可选记错）
 async function advance(known) {
   if (!round.value || !currentWord.value) return
   try {
     const wordId = currentWord.value.id
-
-    // 从 pendingWordIds 移除当前词
     round.value.pendingWordIds = (round.value.pendingWordIds || []).filter(id => id !== wordId)
 
     if (known) {
       knownCount.value++
     } else {
       unknownCount.value++
-      // 幂等累加错误次数
       const errId = 'err_' + wordId
       const existing = await getAll('errors')
       const old = existing.find(e => e.id === errId)
       await put('errors', {
-        id: errId,
-        wordId,
+        id: errId, wordId,
         count: (old?.count || 0) + 1,
         updatedAt: Date.now()
       })
     }
 
-    // 本轮是否答完
     if (round.value.pendingWordIds.length === 0) {
       round.value.status = 'completed'
       round.value.completedAt = Date.now()
     }
 
-    // 🛡️ 剥掉 Vue 响应式 Proxy 后再存 IndexedDB（否则 DataCloneError）
     await put('rounds', toRaw(round.value))
 
-    // 同步更新 store
     if (route.params.id) {
       if (round.value.status === 'completed' && store.activeRound?.id === round.value.id) {
         store.activeRound = null
@@ -247,67 +226,182 @@ async function advance(known) {
     loadCurrent()
   } catch (e) {
     console.error('advance failed', e)
-    showToast('⚠️ 保存失败，请重试: ' + (e.message || ''), 'error')
+    showToast('⚠️ 保存失败: ' + (e.message || ''), 'error')
   }
 }
 
-function markKnown() {
-  advance(true)
-}
-
-function markUnknown() {
-  advance(false)
-}
+function markKnown() { advance(true) }
+function markUnknown() { advance(false) }
 
 onMounted(loadRound)
-
 watch(() => route.params.id, loadRound)
 </script>
 
 <style scoped>
-.quiz { padding: 16px; display: flex; flex-direction: column; gap: 16px; animation: fadeIn 0.3s ease; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.quiz-page {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100vh;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-.quiz-header { padding: 14px 16px; }
-.quiz-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.round-name { font-weight: 600; font-size: 0.95rem; flex: 1; }
-.dict-tag { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; background: #eef2ff; color: var(--primary); font-weight: 500; }
-.progress-bar-bg { height: 8px; background: #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
-.progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); border-radius: 8px; transition: width 0.3s ease; }
-.progress-stats { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-secondary); }
+/* progress card */
+.progress-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
 
-.word-card { padding: 28px 20px; text-align: center; }
-.word-en { font-size: 2rem; font-weight: 700; word-break: break-word; }
-.speak-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 4px 8px; border-radius: 50%; transition: background 0.2s; flex-shrink: 0; line-height: 1; }
-.speak-btn:hover { background: #eef2ff; }
-.speak-btn:active { transform: scale(0.9); }
-.word-en-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
-.word-zh { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 24px; padding: 12px; background: #f7fafc; border-radius: var(--radius-xs); cursor: pointer; user-select: none; }
-.tap-hint { display: inline-block; font-size: 0.7rem; color: var(--text-muted); margin-left: 8px; opacity: 0.6; }
-.actions { display: flex; gap: 12px; margin-top: 8px; }
-.action-btn { flex: 1; }
-.btn-success { background: var(--success, #38a169); color: white; border: none; }
-.btn-danger { background: var(--danger, #e53e3e); color: white; border: none; }
-.btn-success:active, .btn-danger:active { opacity: 0.85; }
-.btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+/* word card */
+.word-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 32px 24px;
+  box-shadow: var(--shadow);
+  gap: 20px;
+}
 
-.empty { padding: 40px 20px; text-align: center; }
-.empty-emoji { font-size: 3rem; margin-bottom: 12px; }
+.word-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.word-en {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+}
 
-.done-card { padding: 32px 20px; text-align: center; }
-.done-emoji { font-size: 3.5rem; margin-bottom: 8px; }
-.done-card h3 { font-size: 1.3rem; margin-bottom: 20px; }
-.done-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 20px; }
-.stat-item { display: flex; flex-direction: column; align-items: center; }
-.stat-num { font-size: 2rem; font-weight: 700; }
-.stat-known .stat-num { color: var(--success, #38a169); }
-.stat-unknown .stat-num { color: var(--danger, #e53e3e); }
-.stat-label { font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; }
-.done-tip { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; }
-.done-actions { display: flex; flex-direction: column; gap: 10px; }
+.speak-btn {
+  background: var(--primary-light);
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--primary);
+  transition: all 0.2s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.speak-btn:active { transform: scale(0.9); background: #D0E3FF; }
 
-.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 999; padding: 10px 20px; border-radius: 12px; font-size: 0.85rem; font-weight: 500; animation: slideDown 0.3s ease; max-width: 90%; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-.toast.success { background: #c6f6d5; color: #276749; }
-.toast.error { background: #fff5f5; color: #c53030; }
-@keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+.zh-toggle {
+  padding: 10px 20px;
+  border: 1.5px dashed #C7C7CC;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s;
+}
+.zh-toggle:active { border-color: var(--primary); color: var(--primary); }
+
+.zh-visible {
+  width: 100%;
+  text-align: center;
+  padding: 16px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.zh-visible > span:first-child { font-size: 1.1rem; color: var(--text-primary); display: block; }
+.zh-hint { display: block; font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; }
+
+.actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.btn-known {
+  flex: 1;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-known:active { transform: scale(0.97); opacity: 0.85; }
+
+.btn-unknown {
+  flex: 1;
+  background: transparent;
+  color: var(--danger);
+  border: 1.5px solid var(--danger);
+  padding: 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-unknown:active { transform: scale(0.97); background: #FFF0EF; }
+
+/* done card */
+.done-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 40px 24px;
+  box-shadow: var(--shadow);
+}
+.done-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+.done-stat { text-align: center; }
+.done-divider {
+  width: 1px;
+  height: 48px;
+  background: #E8E8ED;
+}
+
+/* toast */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 500;
+  animation: slideDown 0.3s ease;
+  max-width: 90%;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.toast.success { background: #E8F8E8; color: #34C759; }
+.toast.error { background: #FEF0F0; color: #FF3B30; }
+@keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 </style>

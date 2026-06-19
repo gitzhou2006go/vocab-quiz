@@ -1,20 +1,24 @@
 <template>
-  <div class="error-book">
-    <h2>错题本</h2>
+  <div class="page">
+    <h2 class="page-title">错题本</h2>
 
-    <div v-if="sortedErrors.length === 0" class="empty card">
-      <div class="empty-emoji">🎉</div>
+    <div v-if="sortedErrors.length === 0" class="empty-state">
+      <div class="empty-icon">🎉</div>
       <p>还没有错题，继续加油！</p>
     </div>
 
-    <div v-else class="error-list">
-      <div v-for="item in sortedErrors" :key="item.wordId" class="error-row card">
-        <div class="error-main">
-          <div class="error-word">{{ getWord(item.wordId)?.en || '未知' }}</div>
-          <div class="error-zh">{{ getWord(item.wordId)?.zh || '' }}</div>
+    <div v-else class="card-group">
+      <div v-for="item in sortedErrors" :key="item.wordId" class="card" style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:0.9rem">{{ getWord(item.wordId)?.en || '未知' }}</div>
+          <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:1px">{{ getWord(item.wordId)?.zh || '' }}</div>
         </div>
-        <span class="error-count-badge">{{ item.totalCount }} 次错</span>
+        <span class="pill-tag" style="background:#FEF0F0;color:var(--danger)">{{ item.totalCount }} 次错</span>
       </div>
+    </div>
+
+    <div v-if="sortedErrors.length > 0" style="text-align:center;padding-top:4px">
+      <span class="text-muted">共 {{ sortedErrors.length }} 个错词</span>
     </div>
   </div>
 </template>
@@ -40,14 +44,4 @@ function getWord(wordId) {
 </script>
 
 <style scoped>
-.error-book { padding: 16px; }
-.empty { padding: 40px 20px; text-align: center; }
-.empty-emoji { font-size: 3rem; margin-bottom: 12px; }
-.empty p { color: var(--text-secondary); }
-.error-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-.error-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
-.error-main { flex: 1; }
-.error-word { font-weight: 600; font-size: 1rem; }
-.error-zh { font-size: 0.85rem; color: var(--text-secondary); margin-top: 2px; }
-.error-count-badge { font-size: 0.75rem; padding: 3px 10px; border-radius: 12px; background: #fff5f5; color: var(--danger, #e53e3e); font-weight: 600; white-space: nowrap; }
 </style>

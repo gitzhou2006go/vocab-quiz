@@ -1,35 +1,38 @@
 <template>
-  <div class="rounds">
-    <h2>历史轮次</h2>
+  <div class="page">
+    <h2 class="page-title">历史轮次</h2>
 
-    <div v-if="rounds.length === 0" class="empty card">
-      <div class="empty-emoji">📋</div>
+    <div v-if="rounds.length === 0" class="empty-state">
+      <div class="empty-icon">📋</div>
       <p>还没有轮次记录</p>
       <button class="btn btn-primary" @click="$router.push('/')">去开一轮</button>
     </div>
 
-    <div v-else class="round-list">
+    <div v-else class="card-group">
       <div
-        v-for="round in sortedRounds"
-        :key="round.id"
-        class="round-card card"
-        :class="{ clickable: round.status === 'active' }"
-        @click="goQuiz(round)"
+        v-for="r in sortedRounds"
+        :key="r.id"
+        class="card"
+        :style="{ cursor: r.status === 'active' ? 'pointer' : 'default' }"
+        @click="goQuiz(r)"
       >
-        <div class="round-header">
-          <span class="round-name">{{ round.name }}</span>
-          <span class="status-badge" :class="round.status">
-            {{ round.status === 'active' ? '进行中' : '已完成' }}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span class="pill-tag" :class="r.status === 'active' ? '' : 'completed-tag'">
+            {{ r.status === 'active' ? '进行中' : '已完成' }}
           </span>
-        </div>
-        <div class="round-meta">
-          <span class="dict-tag">{{ getDictName(round.dictId) }}</span>
-          <span class="progress-text">{{ completed(round) }} / {{ round.totalWords }} 词</span>
+          <span style="font-weight:600;font-size:0.88rem;flex:1">{{ r.name }}</span>
+          <span class="pill-tag">{{ getDictName(r.dictId) }}</span>
         </div>
         <div class="progress-bar-bg">
-          <div class="progress-bar-fill" :style="{ width: percent(round) + '%' }"></div>
+          <div class="progress-bar-fill" :style="{ width: percent(r) + '%' }"></div>
         </div>
-        <div v-if="round.createdAt" class="round-time">{{ formatTime(round.createdAt) }}</div>
+        <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-secondary);margin-top:6px">
+          <span>{{ completed(r) }} / {{ r.totalWords }} 词</span>
+          <span>{{ percent(r) }}%</span>
+        </div>
+        <div v-if="r.createdAt" style="font-size:0.72rem;color:var(--text-muted);margin-top:6px">
+          {{ formatTime(r.createdAt) }}
+        </div>
       </div>
     </div>
   </div>
@@ -57,49 +60,27 @@ function getDictName(dictId) {
   return d ? d.name : '未知词库'
 }
 
-function completed(round) {
-  return round.totalWords - (round.pendingWordIds?.length || 0)
+function completed(r) {
+  return r.totalWords - (r.pendingWordIds?.length || 0)
 }
 
-function percent(round) {
-  if (!round.totalWords) return 0
-  return Math.round((completed(round) / round.totalWords) * 100)
+function percent(r) {
+  if (!r.totalWords) return 0
+  return Math.round((completed(r) / r.totalWords) * 100)
 }
 
 function formatTime(ts) {
   try {
     const d = new Date(ts)
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  } catch {
-    return ''
-  }
+  } catch { return '' }
 }
 
-function goQuiz(round) {
-  if (round.status === 'active') {
-    router.push(`/quiz/${round.id}`)
-  }
+function goQuiz(r) {
+  if (r.status === 'active') router.push(`/quiz/${r.id}`)
 }
 </script>
 
 <style scoped>
-.rounds { padding: 16px; }
-.empty { padding: 40px 20px; text-align: center; }
-.empty-emoji { font-size: 3rem; margin-bottom: 12px; }
-.empty p { color: var(--text-secondary); margin-bottom: 16px; }
-.round-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-.round-card { padding: 14px 16px; }
-.round-card.clickable { cursor: pointer; transition: transform 0.2s; }
-.round-card.clickable:active { transform: scale(0.98); }
-.round-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.round-name { font-weight: 600; font-size: 0.95rem; }
-.status-badge { font-size: 0.72rem; padding: 2px 10px; border-radius: 10px; font-weight: 600; }
-.status-badge.active { background: #c6f6d5; color: #276749; }
-.status-badge.completed { background: #edf2f7; color: #4a5568; }
-.round-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.dict-tag { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; background: #eef2ff; color: var(--primary, #4CAF50); font-weight: 500; }
-.progress-text { font-size: 0.78rem; color: var(--text-secondary); }
-.progress-bar-bg { height: 6px; background: #e2e8f0; border-radius: 6px; overflow: hidden; }
-.progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary, #4CAF50), var(--success, #38a169)); border-radius: 6px; transition: width 0.3s ease; }
-.round-time { font-size: 0.72rem; color: var(--text-muted); margin-top: 8px; }
+.completed-tag { background: #E8E8ED; color: var(--text-secondary); }
 </style>
