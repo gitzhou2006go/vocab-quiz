@@ -17,22 +17,27 @@
     <!-- 答题卡片 -->
     <div v-if="currentWord && round" class="word-card">
       <div class="word-main">
-        <div class="word-en">{{ currentWord.en }}</div>
-        <button class="speak-btn" @click="speak(currentWord.en)">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-          </svg>
-        </button>
+        <div class="word-title-row">
+          <div class="word-en">{{ currentWord.en || currentWord.title }}</div>
+          <button v-if="currentWord.en" class="speak-btn" @click="speak(currentWord.en)">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+          </button>
+        </div>
+        <span v-if="currentWord.author" class="word-author">{{ currentWord.author }}</span>
       </div>
 
-      <div v-if="!showZh" class="zh-toggle" @click="showZh = true">
-        <span>👁 看释义</span>
-      </div>
-      <div v-else class="zh-visible" @click="showZh = false">
-        <span>{{ currentWord.zh }}</span>
-        <span class="zh-hint">轻点收起</span>
+      <div v-if="currentWord.zh || currentWord.content">
+        <div v-if="!showZh" class="zh-toggle" @click="showZh = true">
+          <span>{{ currentWord.zh ? '👁 看释义' : '👁 看全文' }}</span>
+        </div>
+        <div v-else class="zh-visible" @click="showZh = false">
+          <span>{{ currentWord.zh || currentWord.content }}</span>
+          <span class="zh-hint">轻点收起</span>
+        </div>
       </div>
 
       <div class="actions">
@@ -272,14 +277,29 @@ watch(() => route.params.id, loadRound)
 
 .word-main {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+.word-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 12px;
 }
 .word-en {
-  font-size: 2.2rem;
+  font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   word-break: break-word;
+  text-align: center;
+}
+.word-author {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin-top: 4px;
 }
 
 .speak-btn {

@@ -51,6 +51,14 @@ export const DICTIONARIES = [
     subLabel: '1-6年级',
     wordCount: 319,
     wordIds: Array.from({ length: 319 }, (_, i) => 4202 + i)
+  },
+  {
+    id: 'poems',
+    name: '古诗词',
+    description: '中华经典古诗词',
+    subLabel: '待添加',
+    wordCount: 0,
+    wordIds: []
   }
 ]
 
@@ -61,6 +69,10 @@ const W = {} // temporary builder
 
 function w(id, en, zh) {
   W[id] = { id, en, zh }
+}
+
+function p(id, title, author, content) {
+  W[id] = { id, title, author, content }
 }
 
 // ------ 1-200: 核心词汇 (CET-4) ------
@@ -2181,3 +2193,22 @@ w(4517, 'play football', '踢足球')
 w(4518, 'play basketball', '打篮球')
 w(4519, 'play piano', '弹钢琴')
 w(4520, 'play guitar', '弹吉他')
+
+// ========== 古诗词（ID 5001+）==========
+// ⚠️ 此处为示例数据，你拿到完整列表后替换下方 p(...) 行即可
+// 格式: p(id, '标题', '作者', '全文内容')
+
+p(5001, '静夜思', '李白', '床前明月光，疑是地上霜。举头望明月，低头思故乡。')
+p(5002, '春晓', '孟浩然', '春眠不觉晓，处处闻啼鸟。夜来风雨声，花落知多少。')
+p(5003, '登鹳雀楼', '王之涣', '白日依山尽，黄河入海流。欲穷千里目，更上一层楼。')
+p(5004, '咏柳', '贺知章', '碧玉妆成一树高，万条垂下绿丝绦。不知细叶谁裁出，二月春风似剪刀。')
+p(5005, '望庐山瀑布', '李白', '日照香炉生紫烟，遥看瀑布挂前川。飞流直下三千尺，疑是银河落九天。')
+
+// 在此下方继续添加更多古诗...
+
+// ========== 动态更新词库配置 ==========
+// 自动填充 poems 词库的 wordCount 和 wordIds
+const poemIds = Object.values(W).filter(w => w.title).map(w => w.id)
+DICTIONARIES.find(d => d.id === 'poems').wordCount = poemIds.length
+DICTIONARIES.find(d => d.id === 'poems').wordIds = poemIds
+DICTIONARIES.find(d => d.id === 'poems').subLabel = poemIds.length + '首'

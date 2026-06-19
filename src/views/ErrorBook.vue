@@ -10,8 +10,8 @@
     <div v-else class="card-group">
       <div v-for="item in sortedErrors" :key="item.wordId" class="card" style="display:flex;align-items:center;gap:12px">
         <div style="flex:1">
-          <div style="font-weight:600;font-size:0.9rem">{{ getWord(item.wordId)?.en || '未知' }}</div>
-          <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:1px">{{ getWord(item.wordId)?.zh || '' }}</div>
+          <div style="font-weight:600;font-size:0.9rem">{{ wordTitle(item.wordId) }}</div>
+          <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:1px">{{ wordSubtitle(item.wordId) }}</div>
         </div>
         <span class="pill-tag" style="background:#FEF0F0;color:var(--danger)">{{ item.totalCount }} 次错</span>
       </div>
@@ -40,6 +40,20 @@ const sortedErrors = computed(() => {
 
 function getWord(wordId) {
   return WORD_MAP[wordId] || null
+}
+
+function wordTitle(wordId) {
+  const w = WORD_MAP[wordId]
+  if (!w) return '未知'
+  return w.en || w.title || '未知'
+}
+
+function wordSubtitle(wordId) {
+  const w = WORD_MAP[wordId]
+  if (!w) return ''
+  if (w.zh) return w.zh
+  if (w.author) return w.author
+  return ''
 }
 </script>
 
