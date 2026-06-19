@@ -66,10 +66,13 @@
       </div>
     </div>
   </div>
+
+  <!-- Toast 提示 -->
+  <div v-if="toastMsg" class="toast" :class="toastType">{{ toastMsg }}</div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, toRaw } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { store, loadActiveRound } from '../store.js'
 import { getAll, put } from '../db.js'
@@ -83,32 +86,45 @@ const currentWord = ref(null)
 const showZh = ref(false)
 const knownCount = ref(0)
 const unknownCount = ref(0)
+const toastMsg = ref('')
+const toastType = ref('') // 'success' | 'error'
+let toastTimer = null
+
+function showToast(msg, type = 'error') {
+  toastMsg.value = msg
+  toastType.value = type
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toastMsg.value = ''; toastTimer = null }, 2500)
+}
 
 function getDictName(dictId) {
   const d = DICTIONARIES.find(x => x.id === dictId)
   return d ? d.name : '未知词库'
 }
 
+const speaking = ref(false)
+
 // 朗读（Web Speech API + Google TTS 兜底）
 function speak(word) {
-  if (!word) return
-  // 优先用 Web Speech API（内置、免费、质量好）
+  if (!word || speaking.value) return
+  speaking.value = true
   if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel() // iOS 必须 cancel 再 speak，否则静音
+    window.speechSynthesis.cancel()
     const u = new SpeechSynthesisUtterance(word)
     u.lang = 'en-US'
     u.rate = 0.9
     u.pitch = 1.0
-    u.onend = () => {} // iOS 需要非空回调
+    u.onstart = () => showToast('🔊 播放中', 'success')
+    u.onend = () => { showToast('', ''); speaking.value = false }
     u.onerror = (e) => {
       console.warn('SpeechSynthesis error', e.error)
+      speaking.value = false
+      showToast('⚠️ 语音暂不可用', 'error')
       fallbackSpeak(word)
     }
-    // ✔ 同步触发（不 setTimeout），Android Chrome 要求手势同步上下文
     window.speechSynthesis.speak(u)
     return
   }
-  // 降级：Google TTS（部分网络环境下被拦截）
   fallbackSpeak(word)
 }
 
@@ -117,9 +133,14 @@ function fallbackSpeak(word) {
     const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q='
       + encodeURIComponent(word) + '&tl=en&client=tw-ob'
     const audio = new Audio(url)
-    audio.play().catch(e => console.warn('Google TTS fallback also failed', e))
+    audio.onplay = () => showToast('🔊 播放中', 'success')
+    audio.onended = () => { showToast('', ''); speaking.value = false }
+    audio.onerror = () => { showToast('⚠️ 网络语音不可用', 'error'); speaking.value = false }
+    audio.play().catch(() => { showToast('⚠️ 语音播放失败', 'error'); speaking.value = false })
   } catch (e) {
     console.warn('TTS unavailable', e)
+    showToast('⚠️ 语音不可用', 'error')
+    speaking.value = false
   }
 }
 
@@ -169,46 +190,51 @@ const isFinished = computed(() => {
 // 把当前词推进（认识 / 不认识 共用：移出 pending，可选记错）
 async function advance(known) {
   if (!round.value || !currentWord.value) return
-  const wordId = currentWord.value.id
+  try {
+    const wordId = currentWord.value.id
 
-  // 从 pendingWordIds 移除当前词
-  round.value.pendingWordIds = (round.value.pendingWordIds || []).filter(id => id !== wordId)
+    // 从 pendingWordIds 移除当前词
+    round.value.pendingWordIds = (round.value.pendingWordIds || []).filter(id => id !== wordId)
 
-  if (known) {
-    knownCount.value++
-  } else {
-    unknownCount.value++
-    // 幂等累加错误次数
-    const errId = 'err_' + wordId
-    const existing = await getAll('errors')
-    const old = existing.find(e => e.id === errId)
-    await put('errors', {
-      id: errId,
-      wordId,
-      count: (old?.count || 0) + 1,
-      updatedAt: Date.now()
-    })
-  }
-
-  // 本轮是否答完
-  if (round.value.pendingWordIds.length === 0) {
-    round.value.status = 'completed'
-    round.value.completedAt = Date.now()
-  }
-
-  await put('rounds', round.value)
-
-  // 同步更新 store
-  if (route.params.id) {
-    // 从 /quiz/:id 进入，且本轮已完成 → store.activeRound 也要清
-    if (round.value.status === 'completed' && store.activeRound?.id === round.value.id) {
-      store.activeRound = null
+    if (known) {
+      knownCount.value++
+    } else {
+      unknownCount.value++
+      // 幂等累加错误次数
+      const errId = 'err_' + wordId
+      const existing = await getAll('errors')
+      const old = existing.find(e => e.id === errId)
+      await put('errors', {
+        id: errId,
+        wordId,
+        count: (old?.count || 0) + 1,
+        updatedAt: Date.now()
+      })
     }
-  } else {
-    store.activeRound = round.value.status === 'active' ? round.value : null
-  }
 
-  loadCurrent()
+    // 本轮是否答完
+    if (round.value.pendingWordIds.length === 0) {
+      round.value.status = 'completed'
+      round.value.completedAt = Date.now()
+    }
+
+    // 🛡️ 剥掉 Vue 响应式 Proxy 后再存 IndexedDB（否则 DataCloneError）
+    await put('rounds', toRaw(round.value))
+
+    // 同步更新 store
+    if (route.params.id) {
+      if (round.value.status === 'completed' && store.activeRound?.id === round.value.id) {
+        store.activeRound = null
+      }
+    } else {
+      store.activeRound = round.value.status === 'active' ? round.value : null
+    }
+
+    loadCurrent()
+  } catch (e) {
+    console.error('advance failed', e)
+    showToast('⚠️ 保存失败，请重试: ' + (e.message || ''), 'error')
+  }
 }
 
 function markKnown() {
@@ -264,4 +290,9 @@ watch(() => route.params.id, loadRound)
 .stat-label { font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; }
 .done-tip { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; }
 .done-actions { display: flex; flex-direction: column; gap: 10px; }
+
+.toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 999; padding: 10px 20px; border-radius: 12px; font-size: 0.85rem; font-weight: 500; animation: slideDown 0.3s ease; max-width: 90%; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.toast.success { background: #c6f6d5; color: #276749; }
+.toast.error { background: #fff5f5; color: #c53030; }
+@keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 </style>
