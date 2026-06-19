@@ -433,4 +433,9 @@ watch(() => route.params.id, loadRound)
   .done-card { padding: 56px 40px; border-radius: 20px; }
   .done-card h3 { font-size: 1.5rem; }
 }
+@media (min-width: 900px) {
+  .word-en { font-size: 3.2rem; }
+  .word-card { padding: 56px 48px; }
+  .btn-known, .btn-unknown { padding: 18px; font-size: 1.1rem; }
+}
 </style>

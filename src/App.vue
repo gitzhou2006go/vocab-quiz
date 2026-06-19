@@ -72,11 +72,15 @@ body {
 /* iPad / 大屏适配 */
 @media (min-width: 640px) {
   #app {
-    max-width: 640px;
+    max-width: 85vw;
     padding: 0 24px 82px;
   }
   .page { padding: 24px; }
   h2.page-title { font-size: 1.8rem; }
+}
+
+@media (min-width: 900px) {
+  #app { max-width: 780px; }
 }
 
 /* ===== Tab Bar (iOS style) ===== */
