@@ -7,22 +7,25 @@
 
     <!-- 进行中的轮次 -->
     <div v-if="store.activeRounds.length > 0" class="card-group" style="margin-top:-4px">
-      <div v-for="r in store.activeRounds" :key="r.id" class="card round-card" @click="goToQuiz(r)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <span class="pill-tag" style="background:#E8F8E8;color:#34C759">进行中</span>
-          <span style="font-weight:600;flex:1;font-size:0.88rem">{{ r.name }}</span>
-          <span class="pill-tag">{{ getDictName(r.dictId) }}</span>
+      <div v-for="r in store.activeRounds" :key="r.id" class="card" style="display:flex;align-items:flex-start;gap:8px;cursor:pointer" @click="goToQuiz(r)">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span class="pill-tag" style="background:#E8F8E8;color:#34C759">进行中</span>
+            <span style="font-weight:600;flex:1;font-size:0.88rem">{{ r.name }}</span>
+            <span class="pill-tag">{{ getDictName(r.dictId) }}</span>
+          </div>
+          <div class="progress-bar-bg" style="margin-bottom:6px">
+            <div class="progress-bar-fill" :style="{ width: roundPercent(r) + '%' }"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-secondary)">
+            <span>已完成 <strong>{{ roundCompleted(r) }}</strong> / {{ r.totalWords }}</span>
+            <span>{{ roundPercent(r) }}%</span>
+          </div>
+          <div style="text-align:right;margin-top:6px;font-size:0.78rem;color:var(--primary);font-weight:500">
+            继续 →
+          </div>
         </div>
-        <div class="progress-bar-bg" style="margin-bottom:6px">
-          <div class="progress-bar-fill" :style="{ width: roundPercent(r) + '%' }"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-secondary)">
-          <span>已完成 <strong>{{ roundCompleted(r) }}</strong> / {{ r.totalWords }}</span>
-          <span>{{ roundPercent(r) }}%</span>
-        </div>
-        <div style="text-align:right;margin-top:6px;font-size:0.78rem;color:var(--primary);font-weight:500">
-          继续 →
-        </div>
+        <button class="del-btn" @click.stop="confirmDelete(r)" title="删除此轮">🗑</button>
       </div>
     </div>
 
@@ -110,7 +113,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { store, loadActiveRound } from '../store.js'
-import { createRound, getAggregatedErrors, getAllRounds } from '../db.js'
+import { createRound, getAggregatedErrors, getAllRounds, deleteItem } from '../db.js'
 import { downloadAll, testPing } from '../fb.js'
 import { DICTIONARIES, WORD_MAP, getDictWords } from '../vocab.js'
 
@@ -225,18 +228,40 @@ async function startNewRound() {
   const newRound = await createRound(`第${roundNum}轮`, wordIds, dict.id)
   router.push(`/quiz/${newRound.id}`)
 }
+
+async function confirmDelete(r) {
+  if (!confirm(`确认删除「${r.name}」？`)) return
+  try {
+    await deleteItem('rounds', r.id)
+    await loadActiveRound()
+    errorStats.value = await getAggregatedErrors()
+  } catch (e) {
+    console.error('Delete failed', e)
+  }
+}
 </script>
 
 <style scoped>
 .home { animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-.round-card { cursor: pointer; transition: transform 0.2s; }
-.round-card:active { transform: scale(0.98); }
-
 .dict-row { cursor: pointer; transition: background 0.15s; -webkit-tap-highlight-color: transparent; }
 .dict-row:active { background: rgba(0,122,255,0.03); }
 .dict-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #C7C7CC; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
 .radio-on { border-color: var(--primary); background: var(--primary); }
 .radio-dot { width: 8px; height: 8px; border-radius: 50%; background: white; }
+.del-btn {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+  margin-top: 2px;
+  -webkit-tap-highlight-color: transparent;
+}
+.del-btn:hover, .del-btn:active { opacity: 1; background: #FEF0F0; }
 </style>
