@@ -4,7 +4,6 @@
   "description": "一轮一轮的词典考核，对错分明，积累进步",
   "start_url": "/vocab-quiz/",
   "display": "standalone",
-  "orientation": "landscape-primary",
   "background_color": "#f0f2f5",
   "theme_color": "#007AFF",
   "icons": [

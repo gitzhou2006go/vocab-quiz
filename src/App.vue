@@ -1,12 +1,7 @@
 <template>
   <div class="app-shell">
-    <!-- 横屏提示（仅在竖屏时显示） -->
-    <div v-if="!isLandscape" class="rotate-hint">
-      <div class="rotate-icon">↻</div>
-      <p>请旋转至横屏使用</p>
-    </div>
-    <router-view v-show="isLandscape" />
-    <nav v-if="showNav && isLandscape" class="tab-bar">
+    <router-view />
+    <nav v-if="showNav" class="tab-bar">
       <router-link to="/" class="tab-item" exact-active-class="tab-active">
         <span class="tab-icon">🏠</span>
         <span class="tab-label">首页</span>
@@ -28,26 +23,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const showNav = computed(() => !route.path.startsWith('/quiz'))
-
-const isLandscape = ref(true)
-
-function checkOrientation() {
-  isLandscape.value = window.innerWidth >= window.innerHeight
-}
-
-onMounted(() => {
-  checkOrientation()
-  window.addEventListener('resize', checkOrientation)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', checkOrientation)
-})
 </script>
 
 <style>
@@ -215,30 +195,4 @@ h2.page-title {
 
 <style scoped>
 .app-shell { min-height: 100vh; }
-
-/* 横屏提示 */
-.rotate-hint {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-  color: var(--text-primary);
-  z-index: 9999;
-  gap: 20px;
-}
-.rotate-icon {
-  font-size: 4rem;
-  animation: rotateHint 2s ease-in-out infinite;
-}
-.rotate-hint p {
-  font-size: 1.2rem;
-  color: var(--text-secondary);
-}
-@keyframes rotateHint {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(90deg); }
-}
 </style>
