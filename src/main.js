@@ -5,6 +5,13 @@ import { initDB, replaceAllData } from './db.js'
 import { listenRemote, downloadAll, cloudVersion } from './fb.js'
 import { store, loadActiveRound } from './store.js'
 
+// 强制竖屏（iPad Safari + PWA）
+try {
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('portrait-primary').catch(() => {})
+  }
+} catch (_) {}
+
 const app = createApp(App)
 app.use(router)
 

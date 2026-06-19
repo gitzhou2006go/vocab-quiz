@@ -65,10 +65,11 @@ body {
 #app {
   min-height: 100vh;
   padding-bottom: 90px;
-  max-width: 820px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
-  padding-left: 24px;
-  padding-right: 24px;
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
 /* ===== Tab Bar ===== */
@@ -78,7 +79,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
-  max-width: 820px;
+  max-width: 100%;
   display: flex;
   background: rgba(255,255,255,0.94);
   backdrop-filter: blur(12px);
