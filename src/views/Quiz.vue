@@ -89,17 +89,35 @@ function getDictName(dictId) {
   return d ? d.name : '未知词库'
 }
 
-// 朗读（Web Speech API）
+// 朗读（双保险：Web Speech API + Google TTS 降级）
 function speak(word) {
   if (!word) return
+  // 1) 优先用 Web Speech API（桌面端质量好、可离线）
   if ('speechSynthesis' in window) {
-    // 取消正在读的，避免重叠
-    window.speechSynthesis.cancel()
+    window.speechSynthesis.cancel() // iOS 必须 cancel 再 speak，否则不发声
     const u = new SpeechSynthesisUtterance(word)
     u.lang = 'en-US'
     u.rate = 0.9
     u.pitch = 1.0
-    window.speechSynthesis.speak(u)
+    // iOS Safari bug: onend 空回调 + 用 setTimeout 确保生效
+    u.onend = () => {}
+    u.onerror = () => fallbackSpeak(word)
+    // iOS 需要离开当前事件循环才能触发
+    setTimeout(() => window.speechSynthesis.speak(u), 50)
+    return
+  }
+  // 2) 降级 Google Translate TTS（移动端兼容性更好）
+  fallbackSpeak(word)
+}
+
+function fallbackSpeak(word) {
+  try {
+    const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q='
+      + encodeURIComponent(word) + '&tl=en&client=tw-ob'
+    const audio = new Audio(url)
+    audio.play().catch(e => console.warn('Google TTS fallback also failed', e))
+  } catch (e) {
+    console.warn('TTS unavailable', e)
   }
 }
 
