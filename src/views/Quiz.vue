@@ -24,7 +24,7 @@
       <button v-if="!showZh" class="btn btn-outline btn-block" @click="showZh = true">
         👁 看释义
       </button>
-      <div v-else class="word-zh">{{ currentWord.zh }}</div>
+      <div v-else class="word-zh" @click="showZh = false">{{ currentWord.zh }} <span class="tap-hint">点击收起</span></div>
 
       <div class="actions">
         <button class="btn btn-danger action-btn" @click="markUnknown">
@@ -282,7 +282,8 @@ watch(() => route.params.id, loadRound)
 .speak-btn:hover { background: #eef2ff; }
 .speak-btn:active { transform: scale(0.9); }
 .word-en-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
-.word-zh { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 24px; padding: 12px; background: #f7fafc; border-radius: var(--radius-xs); }
+.word-zh { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 24px; padding: 12px; background: #f7fafc; border-radius: var(--radius-xs); cursor: pointer; user-select: none; }
+.tap-hint { display: inline-block; font-size: 0.7rem; color: var(--text-muted); margin-left: 8px; opacity: 0.6; }
 .actions { display: flex; gap: 12px; margin-top: 8px; }
 .action-btn { flex: 1; }
 .btn-success { background: var(--success, #38a169); color: white; border: none; }
