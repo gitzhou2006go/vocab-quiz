@@ -167,7 +167,6 @@ function loadCurrent() {
     return
   }
   currentWord.value = WORD_MAP[pending[0]] || null
-  showZh.value = false
 }
 
 // 加载指定轮次（按路由 id 或当前进行中的轮次）
