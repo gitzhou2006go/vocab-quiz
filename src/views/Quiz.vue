@@ -105,14 +105,13 @@ function getDictName(dictId) {
 const speaking = ref(false)
 let speechTimer = null
 
-// 朗读（Web Speech API）
+// 朗读
 function speak(word) {
   if (!word) return
 
-  // 如果还在播就重置（不阻塞后续点击）
+  // 如果还在播就重置
   if (speaking.value) {
     window.speechSynthesis?.cancel()
-    speaking.value = false
     clearTimeout(speechTimer)
   }
 
@@ -121,35 +120,42 @@ function speak(word) {
 
   // 安全兜底：最多 4 秒后自动清除标志位
   clearTimeout(speechTimer)
-  speechTimer = setTimeout(() => {
-    speaking.value = false
-    showToast('')
-  }, 4000)
+  speechTimer = setTimeout(() => { speaking.value = false; showToast('') }, 4000)
 
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel()
-    // 先尝试初始化语音引擎（Android 需要）
-    try { window.speechSynthesis.getVoices() } catch (_) {}
-
-    const u = new SpeechSynthesisUtterance(word)
-    u.lang = 'en-US'
-    u.rate = 0.9
-    u.pitch = 1.0
-    u.onstart = () => {}
-    u.onend = () => { speaking.value = false; clearTimeout(speechTimer); showToast('') }
-    u.onerror = () => { speaking.value = false; clearTimeout(speechTimer); showToast('') }
-
+  // 方案一：Web Speech API（桌面端/部分安卓可用）
+  if ('speechSynthesis' in window && window.speechSynthesis) {
     try {
+      window.speechSynthesis.cancel()
+      // 部分安卓需要 getVoices 预热引擎
+      try { window.speechSynthesis.getVoices() } catch (_) {}
+      const u = new SpeechSynthesisUtterance(word)
+      u.lang = 'en-US'
+      u.rate = 0.9
+      u.pitch = 1.0
+      u.onend = () => { speaking.value = false; clearTimeout(speechTimer); showToast('') }
+      u.onerror = () => { fallbackSpeak(word) }
       window.speechSynthesis.speak(u)
-    } catch (e) {
-      speaking.value = false
-      clearTimeout(speechTimer)
-      showToast('⚠️ 语音不可用', 'error')
-    }
-  } else {
+      return
+    } catch (_) {}
+  }
+
+  // 方案二：在线发音（国内可用：有道词典）
+  fallbackSpeak(word)
+}
+
+function fallbackSpeak(word) {
+  try {
+    // 有道词典美式发音（网易服务器，国内正常访问）
+    const url = 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(word) + '&type=1'
+    const audio = new Audio(url)
+    audio.onended = () => { speaking.value = false; clearTimeout(speechTimer); showToast('') }
+    audio.onerror = () => { showToast('⚠️ 语音不可用', 'error'); speaking.value = false; clearTimeout(speechTimer) }
+    audio.play().catch(() => { showToast('⚠️ 语音不可用', 'error'); speaking.value = false; clearTimeout(speechTimer) })
+  } catch (e) {
+    console.warn('TTS unavailable', e)
+    showToast('⚠️ 语音不可用', 'error')
     speaking.value = false
     clearTimeout(speechTimer)
-    showToast('⚠️ 设备不支持语音', 'error')
   }
 }
 
