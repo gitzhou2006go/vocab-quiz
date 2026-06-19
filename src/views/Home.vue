@@ -5,22 +5,24 @@
       一轮一轮的词典考核，错题自动积累巩固
     </p>
 
-    <!-- 当前进行中的轮次 -->
-    <div v-if="store.activeRound" class="card round-card" @click="goToQuiz">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <span class="pill-tag" style="background:#E8F8E8;color:#34C759">进行中</span>
-        <span style="font-weight:600;flex:1">{{ store.activeRound.name }}</span>
-        <span class="pill-tag">{{ getDictName(store.activeRound.dictId) }}</span>
-      </div>
-      <div class="progress-bar-bg" style="margin-bottom:8px">
-        <div class="progress-bar-fill" :style="{ width: progressPercent + '%' }"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-secondary)">
-        <span>已完成 <strong>{{ completedCount }}</strong> / {{ store.activeRound.totalWords }}</span>
-        <span>{{ progressPercent }}%</span>
-      </div>
-      <div style="text-align:right;margin-top:8px;font-size:0.78rem;color:var(--primary);font-weight:500">
-        继续考核 →
+    <!-- 进行中的轮次 -->
+    <div v-if="store.activeRounds.length > 0" class="card-group" style="margin-top:-4px">
+      <div v-for="r in store.activeRounds" :key="r.id" class="card round-card" @click="goToQuiz(r)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span class="pill-tag" style="background:#E8F8E8;color:#34C759">进行中</span>
+          <span style="font-weight:600;flex:1;font-size:0.88rem">{{ r.name }}</span>
+          <span class="pill-tag">{{ getDictName(r.dictId) }}</span>
+        </div>
+        <div class="progress-bar-bg" style="margin-bottom:6px">
+          <div class="progress-bar-fill" :style="{ width: roundPercent(r) + '%' }"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-secondary)">
+          <span>已完成 <strong>{{ roundCompleted(r) }}</strong> / {{ r.totalWords }}</span>
+          <span>{{ roundPercent(r) }}%</span>
+        </div>
+        <div style="text-align:right;margin-top:6px;font-size:0.78rem;color:var(--primary);font-weight:500">
+          继续 →
+        </div>
       </div>
     </div>
 
@@ -121,20 +123,19 @@ const dbTestResult = ref(null)
 onMounted(async () => {
   await loadActiveRound()
   errorStats.value = await getAggregatedErrors()
-  if (store.activeRound && store.activeRound.dictId) {
-    selectedDict.value = store.activeRound.dictId
+  if (store.activeRounds.length > 0 && store.activeRounds[0].dictId) {
+    selectedDict.value = store.activeRounds[0].dictId
   }
 })
 
-const completedCount = computed(() => {
-  if (!store.activeRound) return 0
-  return store.activeRound.totalWords - (store.activeRound.pendingWordIds?.length || 0)
-})
+function roundCompleted(r) {
+  return r.totalWords - (r.pendingWordIds?.length || 0)
+}
 
-const progressPercent = computed(() => {
-  if (!store.activeRound || !store.activeRound.totalWords) return 0
-  return Math.round((completedCount.value / store.activeRound.totalWords) * 100)
-})
+function roundPercent(r) {
+  if (!r.totalWords) return 0
+  return Math.round((roundCompleted(r) / r.totalWords) * 100)
+}
 
 const topErrors = computed(() => {
   return [...errorStats.value]
@@ -165,9 +166,9 @@ function wordSubtitle(wordId) {
   return ''
 }
 
-function goToQuiz() {
-  if (store.activeRound) {
-    router.push(`/quiz/${store.activeRound.id}`)
+function goToQuiz(round) {
+  if (round) {
+    router.push(`/quiz/${round.id}`)
   }
 }
 
@@ -222,7 +223,6 @@ async function startNewRound() {
   const roundNum = allRounds.filter(r => r.dictId === dict.id).length + 1
 
   const newRound = await createRound(`第${roundNum}轮`, wordIds, dict.id)
-  store.activeRound = newRound
   router.push(`/quiz/${newRound.id}`)
 }
 </script>

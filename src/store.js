@@ -2,7 +2,7 @@ import { reactive } from 'vue'
 import { getAll } from './db.js'
 
 export const store = reactive({
-  activeRound: null,
+  activeRounds: [],
   currentWord: null,
   rounds: [],
   errors: [],
@@ -11,7 +11,6 @@ export const store = reactive({
 
 export async function loadActiveRound() {
   const rounds = await getAll('rounds')
-  store.activeRound = rounds.find(r => r.status === 'active') || null
   store.rounds = rounds
-  return store.activeRound
+  store.activeRounds = rounds.filter(r => r.status === 'active')
 }

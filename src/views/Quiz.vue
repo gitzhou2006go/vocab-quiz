@@ -173,8 +173,9 @@ async function loadRound() {
     const all = await getAll('rounds')
     round.value = all.find(r => String(r.id) === String(id)) || null
   } else {
+    // 无指定轮次 ID 时取第一个进行中的轮次
     await loadActiveRound()
-    round.value = store.activeRound
+    round.value = store.activeRounds[0] || null
   }
   if (round.value && round.value.pendingWordIds?.length === 0) {
     currentWord.value = null
@@ -220,13 +221,8 @@ async function advance(known) {
 
     await put('rounds', toRaw(round.value))
 
-    if (route.params.id) {
-      if (round.value.status === 'completed' && store.activeRound?.id === round.value.id) {
-        store.activeRound = null
-      }
-    } else {
-      store.activeRound = round.value.status === 'active' ? round.value : null
-    }
+    // 刷新 store 中的 active 轮次列表
+    await loadActiveRound()
 
     loadCurrent()
   } catch (e) {
