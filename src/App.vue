@@ -57,14 +57,27 @@ body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text-primary);
-  max-width: 480px;
-  margin: 0 auto;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#app { min-height: 100vh; padding-bottom: 82px; }
+#app {
+  min-height: 100vh;
+  padding-bottom: 82px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* iPad / 大屏适配 */
+@media (min-width: 640px) {
+  #app {
+    max-width: 640px;
+    padding: 0 24px 82px;
+  }
+  .page { padding: 24px; }
+  h2.page-title { font-size: 1.8rem; }
+}
 
 /* ===== Tab Bar (iOS style) ===== */
 .tab-bar {

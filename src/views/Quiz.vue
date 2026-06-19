@@ -424,4 +424,17 @@ watch(() => route.params.id, loadRound)
 .toast.success { background: #E8F8E8; color: #34C759; }
 .toast.error { background: #FEF0F0; color: #FF3B30; }
 @keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+/* iPad / 大屏适配 */
+@media (min-width: 640px) {
+  .quiz-page { gap: 24px; }
+  .word-en { font-size: 2.8rem; }
+  .word-author { font-size: 1rem; }
+  .word-card { padding: 48px 40px; border-radius: 20px; gap: 28px; }
+  .zh-visible { padding: 24px; }
+  .zh-visible > span:first-child { font-size: 1.3rem; }
+  .btn-known, .btn-unknown { padding: 16px; font-size: 1rem; }
+  .done-card { padding: 56px 40px; border-radius: 20px; }
+  .done-card h3 { font-size: 1.5rem; }
+}
 </style>
