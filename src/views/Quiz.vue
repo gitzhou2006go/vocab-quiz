@@ -103,44 +103,53 @@ function getDictName(dictId) {
 }
 
 const speaking = ref(false)
+let speechTimer = null
 
-// 朗读（Web Speech API + Google TTS 兜底）
+// 朗读（Web Speech API）
 function speak(word) {
-  if (!word || speaking.value) return
+  if (!word) return
+
+  // 如果还在播就重置（不阻塞后续点击）
+  if (speaking.value) {
+    window.speechSynthesis?.cancel()
+    speaking.value = false
+    clearTimeout(speechTimer)
+  }
+
   speaking.value = true
+  showToast('🔊 播放中', 'success')
+
+  // 安全兜底：最多 4 秒后自动清除标志位
+  clearTimeout(speechTimer)
+  speechTimer = setTimeout(() => {
+    speaking.value = false
+    showToast('')
+  }, 4000)
+
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel()
+    // 先尝试初始化语音引擎（Android 需要）
+    try { window.speechSynthesis.getVoices() } catch (_) {}
+
     const u = new SpeechSynthesisUtterance(word)
     u.lang = 'en-US'
     u.rate = 0.9
     u.pitch = 1.0
-    u.onstart = () => showToast('🔊 播放中', 'success')
-    u.onend = () => { showToast('', ''); speaking.value = false }
-    u.onerror = (e) => {
-      console.warn('SpeechSynthesis error', e.error)
-      speaking.value = false
-      showToast('⚠️ 语音暂不可用', 'error')
-      fallbackSpeak(word)
-    }
-    window.speechSynthesis.speak(u)
-    return
-  }
-  fallbackSpeak(word)
-}
+    u.onstart = () => {}
+    u.onend = () => { speaking.value = false; clearTimeout(speechTimer); showToast('') }
+    u.onerror = () => { speaking.value = false; clearTimeout(speechTimer); showToast('') }
 
-function fallbackSpeak(word) {
-  try {
-    const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q='
-      + encodeURIComponent(word) + '&tl=en&client=tw-ob'
-    const audio = new Audio(url)
-    audio.onplay = () => showToast('🔊 播放中', 'success')
-    audio.onended = () => { showToast('', ''); speaking.value = false }
-    audio.onerror = () => { showToast('⚠️ 网络语音不可用', 'error'); speaking.value = false }
-    audio.play().catch(() => { showToast('⚠️ 语音播放失败', 'error'); speaking.value = false })
-  } catch (e) {
-    console.warn('TTS unavailable', e)
-    showToast('⚠️ 语音不可用', 'error')
+    try {
+      window.speechSynthesis.speak(u)
+    } catch (e) {
+      speaking.value = false
+      clearTimeout(speechTimer)
+      showToast('⚠️ 语音不可用', 'error')
+    }
+  } else {
     speaking.value = false
+    clearTimeout(speechTimer)
+    showToast('⚠️ 设备不支持语音', 'error')
   }
 }
 
