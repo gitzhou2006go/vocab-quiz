@@ -17,7 +17,10 @@
 
     <!-- 答题卡片 -->
     <div v-if="currentWord && round" class="word-card card">
-      <div class="word-en">{{ currentWord.en }}</div>
+      <div class="word-en-row">
+        <div class="word-en">{{ currentWord.en }}</div>
+        <button class="speak-btn" title="朗读" @click="speak(currentWord.en)">🔊</button>
+      </div>
       <button v-if="!showZh" class="btn btn-outline btn-block" @click="showZh = true">
         👁 看释义
       </button>
@@ -84,6 +87,20 @@ const unknownCount = ref(0)
 function getDictName(dictId) {
   const d = DICTIONARIES.find(x => x.id === dictId)
   return d ? d.name : '未知词库'
+}
+
+// 朗读（Web Speech API）
+function speak(word) {
+  if (!word) return
+  if ('speechSynthesis' in window) {
+    // 取消正在读的，避免重叠
+    window.speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(word)
+    u.lang = 'en-US'
+    u.rate = 0.9
+    u.pitch = 1.0
+    window.speechSynthesis.speak(u)
+  }
 }
 
 // 取出当前要答的词
@@ -200,7 +217,11 @@ watch(() => route.params.id, loadRound)
 .progress-stats { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-secondary); }
 
 .word-card { padding: 28px 20px; text-align: center; }
-.word-en { font-size: 2rem; font-weight: 700; margin-bottom: 20px; word-break: break-word; }
+.word-en { font-size: 2rem; font-weight: 700; word-break: break-word; }
+.speak-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 4px 8px; border-radius: 50%; transition: background 0.2s; flex-shrink: 0; line-height: 1; }
+.speak-btn:hover { background: #eef2ff; }
+.speak-btn:active { transform: scale(0.9); }
+.word-en-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
 .word-zh { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 24px; padding: 12px; background: #f7fafc; border-radius: var(--radius-xs); }
 .actions { display: flex; gap: 12px; margin-top: 8px; }
 .action-btn { flex: 1; }
