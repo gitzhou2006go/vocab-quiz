@@ -6,18 +6,10 @@
   <meta name="theme-color" content="#667eea" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="manifest" href="/vocab-quiz/assets/manifest-DWmZvFZY.json" />
-  <link rel="apple-touch-icon" href="/vocab-quiz/assets/icon-192-CLuWq5Vy.png" />
+  <link rel="manifest" href="/vocab-quiz/manifest.json" />
+  <link rel="apple-touch-icon" href="/vocab-quiz/icon-192.png" />
   <title>单词考核</title>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
-      });
-    }
-  </script>
-  <script type="module" crossorigin src="/vocab-quiz/assets/index-DL5z8Cgr.js"></script>
-  <link rel="stylesheet" crossorigin href="/vocab-quiz/assets/index-DUYg3ahT.css">
+  <script type="module" src="/src/main.js"></script>
 </head>
 <body>
   <div id="app"></div>

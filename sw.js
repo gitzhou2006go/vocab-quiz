@@ -42,3 +42,10 @@ self.addEventListener('fetch', event => {
     })
   )
 })
+
+// 收到「跳过等待」消息后立即接管 —— 用于「点击更新到最新」按钮
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})

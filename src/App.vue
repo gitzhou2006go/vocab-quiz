@@ -1,5 +1,11 @@
 <template>
   <div class="app-shell">
+    <!-- 新版本更新提示横幅 -->
+    <div v-if="updateAvailable" class="update-banner" @click="applyUpdate">
+      <span class="update-icon">🔄</span>
+      <span class="update-text">新版本可用，点击更新</span>
+      <span class="update-btn">更新</span>
+    </div>
     <router-view />
     <nav v-if="showNav" class="tab-bar">
       <router-link to="/" class="tab-item" exact-active-class="tab-active">
@@ -23,11 +29,49 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const showNav = computed(() => !route.path.startsWith('/quiz'))
+
+// ===== Service Worker 更新检测 =====
+const updateAvailable = ref(false)
+let swRegistration = null
+
+onMounted(async () => {
+  if (!('serviceWorker' in navigator)) return
+  try {
+    swRegistration = await navigator.serviceWorker.register('sw.js')
+
+    // 如果已有等待中的 SW（例如用户之前打开过页面但没刷新）
+    if (swRegistration.waiting) {
+      updateAvailable.value = true
+    }
+
+    // 监听新 SW 安装
+    swRegistration.addEventListener('updatefound', () => {
+      const newSW = swRegistration.installing
+      if (!newSW) return
+      newSW.addEventListener('statechange', () => {
+        // installed = 下载完成，等待激活
+        if (newSW.state === 'installed') {
+          updateAvailable.value = true
+        }
+      })
+    })
+  } catch (e) {
+    console.log('SW registration failed', e)
+  }
+})
+
+function applyUpdate() {
+  if (swRegistration && swRegistration.waiting) {
+    swRegistration.waiting.postMessage('SKIP_WAITING')
+  }
+  // 稍等片刻让 SW 激活，然后刷新
+  window.location.reload()
+}
 </script>
 
 <style>
@@ -197,4 +241,38 @@ h2.page-title {
 
 <style scoped>
 .app-shell { min-height: 100vh; }
+
+/* ===== 更新横幅 ===== */
+.update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  background: linear-gradient(135deg, var(--primary), #5AC8FA);
+  color: white;
+  cursor: pointer;
+  animation: bannerSlideDown 0.35s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.update-banner:active { opacity: 0.85; }
+.update-icon { font-size: 1.2rem; flex-shrink: 0; }
+.update-text { flex: 1; font-size: 0.88rem; font-weight: 500; }
+.update-btn {
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.25);
+  font-size: 0.82rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+@keyframes bannerSlideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
 </style>
