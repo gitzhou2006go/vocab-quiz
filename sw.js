@@ -1,11 +1,9 @@
-const CACHE = 'vocab-quiz-v4'
+const CACHE = 'vocab-quiz-v5'
 
-// 安装时不跳过等待 —— 让页面有机会提示用户更新
-self.addEventListener('install', () => {
-  // 不调用 skipWaiting，等待用户确认后再激活
-})
+// 立即激活，不等待
+self.addEventListener('install', () => self.skipWaiting())
 
-// 激活时清除旧缓存，立即接管所有页面
+// 激活时清除旧缓存
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -14,45 +12,26 @@ self.addEventListener('activate', e => {
   )
 })
 
+// 网络优先，缓存作为离线回退
 self.addEventListener('fetch', e => {
-  const { request } = e
-  const url = new URL(request.url)
-
-  // 只处理同源请求
+  const url = new URL(e.request.url)
   if (url.origin !== location.origin) return
 
-  // 页面导航（HTML）→ 网络优先，离线时走缓存
-  if (request.mode === 'navigate') {
-    e.respondWith(
-      fetch(request)
-        .then(res => {
-          const clone = res.clone()
-          caches.open(CACHE).then(cache => cache.put(request, clone))
-          return res
-        })
-        .catch(() => caches.match(request))
-    )
+  // version.json 永远不走缓存
+  if (url.pathname.includes('version.json')) {
+    e.respondWith(fetch(e.request))
     return
   }
 
-  // 静态资源（JS/CSS/图片等）→ 缓存优先，后台更新缓存
   e.respondWith(
-    caches.match(request).then(cached => {
-      const fetchAndCache = fetch(request).then(res => {
+    fetch(e.request)
+      .then(res => {
         if (res.ok) {
           const clone = res.clone()
-          caches.open(CACHE).then(cache => cache.put(request, clone))
+          caches.open(CACHE).then(cache => cache.put(e.request, clone))
         }
         return res
       })
-      return cached || fetchAndCache
-    })
+      .catch(() => caches.match(e.request))
   )
-})
-
-// 收到「跳过等待」消息后才激活（由用户点击"更新"触发）
-self.addEventListener('message', event => {
-  if (event.data === 'SKIP_WAITING') {
-    self.skipWaiting()
-  }
 })

@@ -29,63 +29,57 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const showNav = computed(() => !route.path.startsWith('/quiz'))
 
-// ===== Service Worker 更新检测 =====
+// ===== 版本更新检测（通过 version.json 轮询，不依赖 SW）=====
 const updateAvailable = ref(false)
-let swRegistration = null
-
-// 从 localStorage 恢复待更新标记，保证下次打开横幅还在
-const pendingFlag = 'sw_pending_update'
-if (localStorage.getItem(pendingFlag)) {
-  updateAvailable.value = true
-}
+const VERSION_KEY = 'app_known_version'
+let pollTimer = null
 
 onMounted(async () => {
-  if (!('serviceWorker' in navigator)) return
-
-  try {
-    swRegistration = await navigator.serviceWorker.register('sw.js')
-
-    // 如果已有等待中的 SW（之前未点击更新）
-    if (swRegistration.waiting) {
-      updateAvailable.value = true
-      localStorage.setItem(pendingFlag, '1')
-    }
-
-    // 监听新 SW 安装
-    swRegistration.addEventListener('updatefound', () => {
-      const newSW = swRegistration.installing
-      if (!newSW) return
-      newSW.addEventListener('statechange', () => {
-        if (newSW.state === 'installed') {
-          updateAvailable.value = true
-          localStorage.setItem(pendingFlag, '1')
-        }
-      })
-    })
-  } catch (e) {
-    console.log('SW registration failed', e)
-  }
+  // 首次检查
+  await checkVersion()
+  // 每 60 秒轮询一次
+  pollTimer = setInterval(checkVersion, 60000)
 })
 
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
+})
+
+async function checkVersion() {
+  try {
+    const resp = await fetch('/vocab-quiz/version.json?t=' + Date.now())
+    if (!resp.ok) return
+    const data = await resp.json()
+    const current = data.version
+    const known = localStorage.getItem(VERSION_KEY)
+    if (!known) {
+      // 首次访问，记录版本
+      localStorage.setItem(VERSION_KEY, current)
+    } else if (known !== current) {
+      updateAvailable.value = true
+    }
+  } catch (_) { /* 静默忽略 */ }
+}
+
 function applyUpdate() {
-  if (swRegistration && swRegistration.waiting) {
-    // 先注册 controllerchange，等 SW 接管后刷新
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      localStorage.removeItem(pendingFlag)
-      window.location.reload()
+  // 清除 SW 缓存，然后刷新
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistration().then(reg => {
+      if (reg) reg.unregister()
     })
-    swRegistration.waiting.postMessage('SKIP_WAITING')
-  } else {
-    // 没有 waiting SW 但 localStorage 有标记 → 清理标记
-    localStorage.removeItem(pendingFlag)
-    window.location.reload()
   }
+  // 清除所有缓存
+  if ('caches' in window) {
+    caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
+  }
+  localStorage.removeItem(VERSION_KEY)
+  window.location.reload()
 }
 </script>
 

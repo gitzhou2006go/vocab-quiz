@@ -24,6 +24,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Generate version file
+        run: echo '{"version":"${{ github.sha }}","builtAt":"${{ github.action_status }}"}' > dist/version.json
       - name: Copy static files to dist
         run: cp manifest.json icon-192.png icon-512.png sw.js dist/
       - name: Upload Pages artifact
