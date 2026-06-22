@@ -24,6 +24,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Copy static files to dist
+        run: cp manifest.json icon-192.png icon-512.png dist/
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
