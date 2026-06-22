@@ -134,16 +134,11 @@ const dbTestResult = ref(null)
 const refreshMsg = ref('')
 const appVersion = ref('...')
 
-// 同步获取版本号（不依赖 onMounted，保证立即显示）
-try {
-  const scriptEl = document.querySelector('script[src*="assets/index-"]')
-  if (scriptEl) {
-    const m = scriptEl.src.match(/index-([a-zA-Z0-9]+)\.js/)
-    appVersion.value = m ? m[1] : '?'
-  } else {
-    appVersion.value = '?'
-  }
-} catch (_) { appVersion.value = '?' }
+// 从 version.json 获取版本号（比 DOM 查询更可靠）
+fetch('/vocab-quiz/version.json?t=' + Date.now())
+  .then(r => r.json())
+  .then(d => { appVersion.value = d.version ? d.version.slice(0, 8) : '?' })
+  .catch(() => { appVersion.value = '?' })
 
 onMounted(async () => {
   await loadActiveRound()
