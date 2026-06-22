@@ -12,6 +12,11 @@
       <div style="text-align:center;font-size:0.88rem;color:var(--text-secondary);margin-top:8px">
         {{ completedCount }} / {{ round.totalWords }}
       </div>
+      <div v-if="knownCount + unknownCount > 0" style="text-align:center;font-size:0.82rem;margin-top:4px">
+        <span style="color:var(--success)">✅ 认识 {{ knownCount }}</span>
+        <span style="margin:0 6px;color:var(--text-muted)">·</span>
+        <span style="color:var(--danger)">❌ 不认识 {{ unknownCount }}</span>
+      </div>
     </div>
 
     <!-- 答题卡片 -->
@@ -204,14 +209,15 @@ async function advance(known) {
       knownCount.value++
     } else {
       unknownCount.value++
-      const errId = 'err_' + wordId
-      const existing = await getAll('errors')
-      const old = existing.find(e => e.id === errId)
-      await put('errors', {
-        id: errId, wordId,
-        count: (old?.count || 0) + 1,
-        updatedAt: Date.now()
-      })
+      const roundId = round.value.id
+	      const errId = 'err_' + roundId + '_' + wordId
+	      const existing = await getAll('errors')
+	      const old = existing.find(e => e.id === errId)
+	      await put('errors', {
+	        id: errId, roundId, wordId,
+	        count: 1,
+	        createdAt: Date.now()
+	      })
     }
 
     if (round.value.pendingWordIds.length === 0) {

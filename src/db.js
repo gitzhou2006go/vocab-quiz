@@ -73,6 +73,42 @@ export async function getAggregatedErrors() {
   return Object.values(stats)
 }
 
+/**
+ * 按轮次分组获取错题
+ * 返回 [{ round, errors: [...] }]，按轮次时间倒序
+ * 无 roundId 的旧数据归入 round=null
+ */
+export async function getErrorsByRound() {
+  const [errors, rounds] = await Promise.all([db.getAll('errors'), db.getAll('rounds')])
+
+  // 按 roundId 分组
+  const groups = {}
+  const unclassified = []
+
+  for (const e of errors) {
+    if (e.roundId != null && rounds.find(r => r.id === e.roundId)) {
+      if (!groups[e.roundId]) groups[e.roundId] = []
+      groups[e.roundId].push(e)
+    } else {
+      unclassified.push(e)
+    }
+  }
+
+  const result = Object.entries(groups).map(([roundId, errs]) => ({
+    round: rounds.find(r => r.id === Number(roundId)),
+    errors: errs
+  }))
+
+  // 按轮次创建时间倒序（最新在上）
+  result.sort((a, b) => (b.round?.createdAt || 0) - (a.round?.createdAt || 0))
+
+  if (unclassified.length > 0) {
+    result.push({ round: null, errors: unclassified })
+  }
+
+  return result
+}
+
 // 云端数据覆盖本地 —— 由 listenRemote 触发，不再 scheduleUpload，避免回环
 export async function replaceAllData(rounds, errors) {
   const tx = db.transaction(['rounds', 'errors'], 'readwrite')
