@@ -108,6 +108,9 @@
       <button class="btn" style="background:#FEF0F0;color:var(--danger);font-size:0.82rem;padding:8px 16px;margin-top:6px;border-radius:8px;width:100%" @click="forceRefresh">
         🔄 强制刷新（清除缓存更新到最新，数据不丢失）
       </button>
+      <p v-if="refreshMsg" style="font-size:0.8rem;margin-top:6px;padding:6px 12px;border-radius:8px;text-align:center;background:#E8F8E8;color:var(--success)">
+        {{ refreshMsg }}
+      </p>
       <p v-if="dbTestResult" style="font-size:0.8rem;margin-top:8px;padding:8px 12px;border-radius:8px;text-align:center" :style="{ background: dbTestResult.ok ? '#E8F8E8' : '#FEF0F0', color: dbTestResult.ok ? '#34C759' : '#FF3B30' }">
         {{ dbTestResult.msg }}
       </p>
@@ -128,7 +131,19 @@ const errorStats = ref([])
 const selectedDict = ref('core')
 const testingDB = ref(false)
 const dbTestResult = ref(null)
+const refreshMsg = ref('')
 const appVersion = ref('...')
+
+// 同步获取版本号（不依赖 onMounted，保证立即显示）
+try {
+  const scriptEl = document.querySelector('script[src*="assets/index-"]')
+  if (scriptEl) {
+    const m = scriptEl.src.match(/index-([a-zA-Z0-9]+)\.js/)
+    appVersion.value = m ? m[1] : '?'
+  } else {
+    appVersion.value = '?'
+  }
+} catch (_) { appVersion.value = '?' }
 
 onMounted(async () => {
   await loadActiveRound()
@@ -136,14 +151,6 @@ onMounted(async () => {
   if (store.activeRounds.length > 0 && store.activeRounds[0].dictId) {
     selectedDict.value = store.activeRounds[0].dictId
   }
-  // 获取当前版本（从页面 script 标签提取 JS hash）
-  try {
-    const script = document.querySelector('script[src*="assets/index-"]')
-    if (script) {
-      const match = script.src.match(/index-([a-zA-Z0-9]+)\.js/)
-      appVersion.value = match ? match[1] : '?'
-    }
-  } catch (_) { appVersion.value = '?' }
 })
 
 function roundCompleted(r) {
@@ -231,7 +238,7 @@ async function testDB() {
 }
 
 async function forceRefresh() {
-  // 清除 Service Worker 缓存，保留 IndexedDB 数据
+  refreshMsg.value = '正在清除缓存...'
   if ('serviceWorker' in navigator) {
     const reg = await navigator.serviceWorker.getRegistration()
     if (reg) await reg.unregister()
@@ -240,7 +247,8 @@ async function forceRefresh() {
     const names = await caches.keys()
     await Promise.all(names.map(n => caches.delete(n)))
   }
-  window.location.reload()
+  refreshMsg.value = '✅ 缓存已清除，正在刷新...'
+  setTimeout(() => window.location.reload(), 500)
 }
 
 async function startNewRound() {
