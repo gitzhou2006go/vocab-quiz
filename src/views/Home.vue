@@ -105,6 +105,9 @@
       <button class="btn" style="background:var(--bg);color:var(--text-primary);font-size:0.82rem;padding:8px 16px;margin-top:8px;border-radius:8px" @click="testDB" :disabled="testingDB">
         {{ testingDB ? '测试中...' : '测试 Firebase 连接' }}
       </button>
+      <button class="btn" style="background:#FEF0F0;color:var(--danger);font-size:0.82rem;padding:8px 16px;margin-top:6px;border-radius:8px;width:100%" @click="forceRefresh">
+        🔄 强制刷新（清除缓存更新到最新，数据不丢失）
+      </button>
       <p v-if="dbTestResult" style="font-size:0.8rem;margin-top:8px;padding:8px 12px;border-radius:8px;text-align:center" :style="{ background: dbTestResult.ok ? '#E8F8E8' : '#FEF0F0', color: dbTestResult.ok ? '#34C759' : '#FF3B30' }">
         {{ dbTestResult.msg }}
       </p>
@@ -225,6 +228,19 @@ async function testDB() {
   } finally {
     testingDB.value = false
   }
+}
+
+async function forceRefresh() {
+  // 清除 Service Worker 缓存，保留 IndexedDB 数据
+  if ('serviceWorker' in navigator) {
+    const reg = await navigator.serviceWorker.getRegistration()
+    if (reg) await reg.unregister()
+  }
+  if ('caches' in window) {
+    const names = await caches.keys()
+    await Promise.all(names.map(n => caches.delete(n)))
+  }
+  window.location.reload()
 }
 
 async function startNewRound() {
