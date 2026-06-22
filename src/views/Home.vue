@@ -115,6 +115,41 @@
         {{ dbTestResult.msg }}
       </p>
     </details>
+
+    <!-- 数据备份 -->
+    <details class="card" style="margin-top:2px;padding:10px 16px">
+      <summary style="font-size:0.78rem;color:var(--text-muted);cursor:pointer;outline:none">
+        💾 数据备份
+      </summary>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
+        <button class="btn" style="background:var(--bg);color:var(--text-primary);font-size:0.82rem;padding:8px 16px;border-radius:8px" @click="exportData">
+          📥 导出数据（下载 JSON 文件）
+        </button>
+        <button class="btn" style="background:var(--bg);color:var(--text-primary);font-size:0.82rem;padding:8px 16px;border-radius:8px" @click="document.getElementById('importFileInput').click()">
+          📤 导入数据（从 JSON 文件恢复）
+        </button>
+        <input id="importFileInput" type="file" accept=".json" style="display:none" @change="importData" />
+        <div style="border-top:0.5px solid rgba(0,0,0,.05);margin:4px 0"></div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:4px">GitHub 备份（需要 Personal Access Token）</div>
+        <input
+          type="password"
+          v-model="githubToken"
+          placeholder="输入 GitHub Token"
+          style="width:100%;padding:8px 10px;border:0.5px solid #C7C7CC;border-radius:8px;font-size:0.82rem;outline:none"
+        />
+        <div style="display:flex;gap:6px">
+          <button class="btn" style="flex:1;background:var(--bg);color:var(--text-primary);font-size:0.82rem;padding:8px;border-radius:8px" @click="uploadToGithub" :disabled="githubBusy">
+            {{ githubBusy ? '上传中...' : '☁️ 上传到 GitHub' }}
+          </button>
+          <button class="btn" style="flex:1;background:var(--bg);color:var(--text-primary);font-size:0.82rem;padding:8px;border-radius:8px" @click="downloadFromGithub" :disabled="githubBusy">
+            {{ githubBusy ? '下载中...' : '☁️ 从 GitHub 下载' }}
+          </button>
+        </div>
+      </div>
+      <p v-if="githubMsg" style="font-size:0.8rem;margin-top:6px;padding:6px 12px;border-radius:8px;text-align:center" :style="{ background: githubOk ? '#E8F8E8' : '#FEF0F0', color: githubOk ? 'var(--success)' : 'var(--danger)' }">
+        {{ githubMsg }}
+      </p>
+    </details>
   </div>
 </template>
 
@@ -122,7 +157,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { store, loadActiveRound } from '../store.js'
-import { createRound, getAggregatedErrors, getAllRounds, deleteItem } from '../db.js'
+import { createRound, getAggregatedErrors, getAllRounds, deleteItem, getAll, replaceAllData } from '../db.js'
 import { downloadAll, testPing } from '../fb.js'
 import { DICTIONARIES, WORD_MAP, getDictWords } from '../vocab.js'
 
@@ -133,6 +168,10 @@ const testingDB = ref(false)
 const dbTestResult = ref(null)
 const refreshMsg = ref('')
 const appVersion = ref('...')
+const githubToken = ref(localStorage.getItem('gh_backup_token') || '')
+const githubMsg = ref('')
+const githubOk = ref(false)
+const githubBusy = ref(false)
 
 // 从 version.json 获取版本号（比 DOM 查询更可靠）
 fetch('/vocab-quiz/version.json?t=' + Date.now())
@@ -244,6 +283,112 @@ async function forceRefresh() {
   }
   refreshMsg.value = '✅ 缓存已清除，正在刷新...'
   setTimeout(() => window.location.reload(), 500)
+}
+
+// ===== 数据备份 =====
+
+async function getAllData() {
+  const [rounds, errors] = await Promise.all([getAll('rounds'), getAll('errors')])
+  return { rounds, errors, exportedAt: Date.now() }
+}
+
+async function exportData() {
+  try {
+    const data = await getAllData()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vocab-quiz-backup-${new Date().toISOString().slice(0,10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    githubMsg.value = '✅ 数据已导出'
+    githubOk.value = true
+  } catch (e) {
+    githubMsg.value = '❌ 导出失败: ' + e.message
+    githubOk.value = false
+  }
+}
+
+async function importData(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  try {
+    const text = await file.text()
+    const data = JSON.parse(text)
+    if (!data.rounds || !data.errors) {
+      throw new Error('无效的备份文件')
+    }
+    await replaceAllData(data.rounds, data.errors)
+    await loadActiveRound()
+    errorStats.value = await getAggregatedErrors()
+    githubMsg.value = `✅ 已恢复 ${data.rounds.length} 轮 · ${data.errors.length} 条错题`
+    githubOk.value = true
+  } catch (e) {
+    githubMsg.value = '❌ 导入失败: ' + e.message
+    githubOk.value = false
+  }
+  // 清空 input，允许重复导入同一文件
+  e.target.value = ''
+}
+
+async function uploadToGithub() {
+  const token = githubToken.value.trim()
+  if (!token) {
+    githubMsg.value = '❌ 请先输入 GitHub Token'
+    githubOk.value = false
+    return
+  }
+  localStorage.setItem('gh_backup_token', token)
+  githubBusy.value = true
+  githubMsg.value = ''
+  try {
+    const data = await getAllData()
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data))))
+    const resp = await fetch('https://api.github.com/repos/gitzhou2006go/vocab-quiz/contents/backup/data.json', {
+      method: 'PUT',
+      headers: { Authorization: 'token ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: 'backup: vocab-quiz data ' + new Date().toISOString().slice(0, 10),
+        content: content,
+        branch: 'main'
+      })
+    })
+    const result = await resp.json()
+    if (resp.ok) {
+      githubMsg.value = `✅ 已上传到 GitHub（${data.rounds.length} 轮 · ${data.errors.length} 条错题）`
+      githubOk.value = true
+    } else {
+      githubMsg.value = '❌ 上传失败: ' + (result.message || resp.status)
+      githubOk.value = false
+    }
+  } catch (e) {
+    githubMsg.value = '❌ 上传失败: ' + e.message
+    githubOk.value = false
+  } finally {
+    githubBusy.value = false
+  }
+}
+
+async function downloadFromGithub() {
+  githubBusy.value = true
+  githubMsg.value = ''
+  try {
+    const resp = await fetch('https://raw.githubusercontent.com/gitzhou2006go/vocab-quiz/main/backup/data.json?t=' + Date.now())
+    if (!resp.ok) throw new Error('没有找到备份文件 (HTTP ' + resp.status + ')')
+    const data = await resp.json()
+    if (!data.rounds || !data.errors) throw new Error('无效的备份文件')
+    await replaceAllData(data.rounds, data.errors)
+    await loadActiveRound()
+    errorStats.value = await getAggregatedErrors()
+    githubMsg.value = `✅ 已从 GitHub 恢复（${data.rounds.length} 轮 · ${data.errors.length} 条错题）`
+    githubOk.value = true
+  } catch (e) {
+    githubMsg.value = '❌ 下载失败: ' + e.message
+    githubOk.value = false
+  } finally {
+    githubBusy.value = false
+  }
 }
 
 async function startNewRound() {
