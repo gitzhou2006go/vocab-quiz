@@ -133,12 +133,13 @@ onMounted(async () => {
   if (store.activeRounds.length > 0 && store.activeRounds[0].dictId) {
     selectedDict.value = store.activeRounds[0].dictId
   }
-  // 获取当前版本（JS 文件名 hash）
+  // 获取当前版本（从页面 script 标签提取 JS hash）
   try {
-    const resp = await fetch('/vocab-quiz/index.html')
-    const html = await resp.text()
-    const match = html.match(/assets\/index-[a-zA-Z0-9]+\.js/)
-    appVersion.value = match ? match[0].replace('assets/', '') : '?'
+    const script = document.querySelector('script[src*="assets/index-"]')
+    if (script) {
+      const match = script.src.match(/index-([a-zA-Z0-9]+)\.js/)
+      appVersion.value = match ? match[1] : '?'
+    }
   } catch (_) { appVersion.value = '?' }
 })
 

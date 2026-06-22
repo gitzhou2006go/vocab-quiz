@@ -37,36 +37,21 @@ const showNav = computed(() => !route.path.startsWith('/quiz'))
 
 // ===== Service Worker 更新检测 =====
 const updateAvailable = ref(false)
-const appVersion = ref('loading...')
 let swRegistration = null
 
-// 从 localStorage 恢复待更新标记（页面关闭后再打开仍可看到）
+// 从 localStorage 恢复待更新标记，保证下次打开横幅还在
 const pendingFlag = 'sw_pending_update'
 if (localStorage.getItem(pendingFlag)) {
   updateAvailable.value = true
 }
 
 onMounted(async () => {
-  // 获取构建时间作为版本标识
-  try {
-    const resp = await fetch('/vocab-quiz/index.html')
-    const html = await resp.text()
-    const match = html.match(/assets\/index-[a-zA-Z0-9]+\.js/)
-    appVersion.value = match ? match[0].replace('assets/', '') : '?'
-  } catch (_) { appVersion.value = '?' }
-
   if (!('serviceWorker' in navigator)) return
-
-  // 监听 controllerchange —— 新 SW 接管后自动刷新
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    localStorage.removeItem(pendingFlag)
-    window.location.reload()
-  })
 
   try {
     swRegistration = await navigator.serviceWorker.register('sw.js')
 
-    // 如果已有等待中的 SW（例如用户之前打开过页面但没刷新）
+    // 如果已有等待中的 SW（之前未点击更新）
     if (swRegistration.waiting) {
       updateAvailable.value = true
       localStorage.setItem(pendingFlag, '1')
@@ -77,15 +62,9 @@ onMounted(async () => {
       const newSW = swRegistration.installing
       if (!newSW) return
       newSW.addEventListener('statechange', () => {
-        // installed = 下载完成，等待激活
         if (newSW.state === 'installed') {
           updateAvailable.value = true
           localStorage.setItem(pendingFlag, '1')
-        }
-        // activated = 新 SW 已激活（跳过等待后），刷新页面
-        if (newSW.state === 'activated') {
-          localStorage.removeItem(pendingFlag)
-          window.location.reload()
         }
       })
     })
@@ -96,11 +75,17 @@ onMounted(async () => {
 
 function applyUpdate() {
   if (swRegistration && swRegistration.waiting) {
+    // 先注册 controllerchange，等 SW 接管后刷新
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      localStorage.removeItem(pendingFlag)
+      window.location.reload()
+    })
     swRegistration.waiting.postMessage('SKIP_WAITING')
+  } else {
+    // 没有 waiting SW 但 localStorage 有标记 → 清理标记
+    localStorage.removeItem(pendingFlag)
+    window.location.reload()
   }
-  localStorage.removeItem(pendingFlag)
-  // controllerchange 事件会触发刷新，但留个保险
-  setTimeout(() => window.location.reload(), 500)
 }
 </script>
 
