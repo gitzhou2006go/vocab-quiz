@@ -99,6 +99,9 @@
       <summary style="font-size:0.78rem;color:var(--text-muted);cursor:pointer;outline:none">
         🔧 诊断
       </summary>
+      <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px;line-height:1.6">
+        版本: <span id="app-version">{{ appVersion }}</span>
+      </div>
       <button class="btn" style="background:var(--bg);color:var(--text-primary);font-size:0.82rem;padding:8px 16px;margin-top:8px;border-radius:8px" @click="testDB" :disabled="testingDB">
         {{ testingDB ? '测试中...' : '测试 Firebase 连接' }}
       </button>
@@ -122,6 +125,7 @@ const errorStats = ref([])
 const selectedDict = ref('core')
 const testingDB = ref(false)
 const dbTestResult = ref(null)
+const appVersion = ref('...')
 
 onMounted(async () => {
   await loadActiveRound()
@@ -129,6 +133,13 @@ onMounted(async () => {
   if (store.activeRounds.length > 0 && store.activeRounds[0].dictId) {
     selectedDict.value = store.activeRounds[0].dictId
   }
+  // 获取当前版本（JS 文件名 hash）
+  try {
+    const resp = await fetch('/vocab-quiz/index.html')
+    const html = await resp.text()
+    const match = html.match(/assets\/index-[a-zA-Z0-9]+\.js/)
+    appVersion.value = match ? match[0].replace('assets/', '') : '?'
+  } catch (_) { appVersion.value = '?' }
 })
 
 function roundCompleted(r) {

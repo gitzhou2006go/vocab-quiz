@@ -1,7 +1,9 @@
 const CACHE = 'vocab-quiz-v4'
 
-// 安装后立即激活，不等待
-self.addEventListener('install', () => self.skipWaiting())
+// 安装时不跳过等待 —— 让页面有机会提示用户更新
+self.addEventListener('install', () => {
+  // 不调用 skipWaiting，等待用户确认后再激活
+})
 
 // 激活时清除旧缓存，立即接管所有页面
 self.addEventListener('activate', e => {
@@ -48,7 +50,7 @@ self.addEventListener('fetch', e => {
   )
 })
 
-// 收到「跳过等待」消息后立即接管
+// 收到「跳过等待」消息后才激活（由用户点击"更新"触发）
 self.addEventListener('message', event => {
   if (event.data === 'SKIP_WAITING') {
     self.skipWaiting()
