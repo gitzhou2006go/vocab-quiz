@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router.js'
-import { initDB, replaceAllData } from './db.js'
+import { initDB, replaceAllData, initNextRoundId } from './db.js'
 import { listenRemote, downloadAll, cloudVersion } from './fb.js'
 import { store, loadActiveRound } from './store.js'
 
@@ -18,6 +18,7 @@ app.use(router)
 // 初始化数据库
 initDB().then(async () => {
   console.log('DB initialized')
+  await initNextRoundId()
 
   // 先用本地数据渲染界面
   await loadActiveRound()

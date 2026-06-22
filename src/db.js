@@ -30,6 +30,12 @@ export async function deleteItem(storeName, id) {
 }
 
 // 以下是 Home.vue 需要的函数
+// 从已有轮次中推断下一个可用 ID，防止刷新后 ID 重置导致覆盖
+export async function initNextRoundId() {
+  const rounds = await db.getAll('rounds')
+  nextRoundId = rounds.reduce((max, r) => Math.max(max, r.id || 0), 0) + 1
+}
+
 let nextRoundId = 1
 let nextErrorId = 1
 
@@ -75,6 +81,7 @@ export async function replaceAllData(rounds, errors) {
   for (const r of rounds) await tx.objectStore('rounds').put(r)
   for (const e of errors) await tx.objectStore('errors').put(e)
   await tx.done
+  await initNextRoundId()
 }
 
 // ====== 云端同步：debounce 上传，避免频繁写 Firebase ======
