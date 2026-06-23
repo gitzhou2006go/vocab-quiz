@@ -37,13 +37,11 @@
         <div v-show="!g.collapsed" style="margin-top:8px;border-top:0.5px solid rgba(0,0,0,.05);padding-top:8px">
           <div v-for="e in g.errors" :key="e.id" class="error-row">
             <div style="flex:1;min-width:0">
-              <div class="error-title">{{ wordTitle(e.wordId) }}</div>
-              <div class="error-subtitle">
-                {{ wordSubtitle(e.wordId) }}
-                <span v-if="e.notKnownCount > 0" class="not-known-badge">已不会 {{ e.notKnownCount }} 次</span>
-              </div>
+              <div class="error-title" @click="speak(wordTitle(e.wordId))">{{ wordTitle(e.wordId) }}</div>
+              <div class="error-subtitle">{{ wordSubtitle(e.wordId) }}</div>
             </div>
             <div class="action-btns">
+              <span class="count-badge">{{ e.notKnownCount || 0 }}</span>
               <button class="btn-know" @click="handleKnown(e, gi)" :disabled="e._busy">✓ 会</button>
               <button class="btn-not-know" @click="handleNotKnown(e, gi)" :disabled="e._busy">✕ 不会</button>
             </div>
@@ -110,6 +108,29 @@ function showToast(msg) {
   toastMsg.value = msg
   if (toastTimer) clearTimeout(toastTimer)
   toastTimer = setTimeout(() => { toastMsg.value = ''; toastTimer = null }, 2000)
+}
+
+// ===== 发音 =====
+function speak(word) {
+  if (!word) return
+  if ('speechSynthesis' in window && window.speechSynthesis) {
+    try {
+      window.speechSynthesis.cancel()
+      try { window.speechSynthesis.getVoices() } catch (_) {}
+      const u = new SpeechSynthesisUtterance(word)
+      u.lang = 'en-US'
+      u.rate = 0.9
+      u.pitch = 1.0
+      window.speechSynthesis.speak(u)
+      return
+    } catch (_) {}
+  }
+  // fallback: 有道语音
+  try {
+    const url = 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(word) + '&type=1'
+    const audio = new Audio(url)
+    audio.play().catch(() => {})
+  } catch (_) {}
 }
 
 // ===== 会 / 不会 操作 =====
@@ -194,18 +215,29 @@ async function handleNotKnown(error, groupIdx) {
   font-weight: 600;
   font-size: 0.88rem;
   word-break: break-word;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
 }
+.error-title:active { opacity: 0.6; }
 .error-subtitle {
   font-size: 0.78rem;
   color: var(--text-secondary);
   margin-top: 1px;
   word-break: break-word;
 }
-.not-known-badge {
-  color: var(--danger);
-  font-size: 0.7rem;
-  margin-left: 4px;
-  opacity: 0.75;
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 12px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 .action-btns {
   display: flex;
