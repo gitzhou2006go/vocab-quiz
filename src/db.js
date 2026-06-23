@@ -29,6 +29,36 @@ export async function deleteItem(storeName, id) {
   return r
 }
 
+/**
+ * 删除一条错题记录
+ */
+export async function deleteError(errorId) {
+  return await deleteItem('errors', errorId)
+}
+
+/**
+ * 从轮次的 pendingWordIds 中移除指定 wordId（如果轮次仍为 active 状态）
+ */
+export async function removeFromRoundPending(roundId, wordId) {
+  const rounds = await db.getAll('rounds')
+  const round = rounds.find(r => r.id === roundId)
+  if (!round || round.status !== 'active') return // 仅 active 轮次才操作
+  round.pendingWordIds = (round.pendingWordIds || []).filter(id => id !== wordId)
+  await db.put('rounds', round)
+  scheduleUpload()
+}
+
+/**
+ * 增加错词的「不会」计数
+ */
+export async function incrementNotKnown(errorId) {
+  const error = await db.get('errors', errorId)
+  if (!error) return
+  error.notKnownCount = (error.notKnownCount || 0) + 1
+  await db.put('errors', error)
+  scheduleUpload()
+}
+
 // 以下是 Home.vue 需要的函数
 // 从已有轮次中推断下一个可用 ID，防止刷新后 ID 重置导致覆盖
 export async function initNextRoundId() {

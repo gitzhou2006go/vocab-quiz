@@ -216,6 +216,7 @@ async function advance(known) {
 	      await put('errors', {
 	        id: errId, roundId, wordId,
 	        count: 1,
+	        notKnownCount: 0,
 	        createdAt: Date.now()
 	      })
     }

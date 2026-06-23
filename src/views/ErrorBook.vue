@@ -38,18 +38,27 @@
           <div v-for="e in g.errors" :key="e.id" class="error-row">
             <div style="flex:1;min-width:0">
               <div class="error-title">{{ wordTitle(e.wordId) }}</div>
-              <div class="error-subtitle">{{ wordSubtitle(e.wordId) }}</div>
+              <div class="error-subtitle">
+                {{ wordSubtitle(e.wordId) }}
+                <span v-if="e.notKnownCount > 0" class="not-known-badge">已不会 {{ e.notKnownCount }} 次</span>
+              </div>
+            </div>
+            <div class="action-btns">
+              <button class="btn-know" @click="handleKnown(e, gi)" :disabled="e._busy">✓ 会</button>
+              <button class="btn-not-know" @click="handleNotKnown(e, gi)" :disabled="e._busy">✕ 不会</button>
             </div>
           </div>
         </div>
       </div>
     </div>
+    <!-- Toast -->
+    <div v-if="toastMsg" class="toast">{{ toastMsg }}</div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getErrorsByRound } from '../db.js'
+import { getErrorsByRound, deleteError, removeFromRoundPending, incrementNotKnown } from '../db.js'
 import { DICTIONARIES, WORD_MAP } from '../vocab.js'
 
 const groups = ref([])
@@ -92,6 +101,66 @@ function formatTime(ts) {
     return `${month}/${day} ${hour}:${min}`
   } catch { return '' }
 }
+
+// ===== Toast =====
+const toastMsg = ref('')
+let toastTimer = null
+
+function showToast(msg) {
+  toastMsg.value = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toastMsg.value = ''; toastTimer = null }, 2000)
+}
+
+// ===== 会 / 不会 操作 =====
+async function handleKnown(error, groupIdx) {
+  if (error._busy) return
+  error._busy = true
+  try {
+    // 从 errors store 删除
+    await deleteError(error.id)
+    // 如果轮次仍 active，也从 pendingWordIds 移除
+    if (error.roundId != null) {
+      await removeFromRoundPending(error.roundId, error.wordId)
+    }
+    // 从本地列表移除
+    const group = groups.value[groupIdx]
+    if (group) {
+      group.errors = group.errors.filter(e => e.id !== error.id)
+      if (group.errors.length === 0) {
+        groups.value = groups.value.filter((_, idx) => idx !== groupIdx)
+      }
+    }
+    showToast('✓ 已标记为掌握')
+  } catch (e) {
+    console.error('handleKnown failed', e)
+    showToast('⚠️ 操作失败')
+  } finally {
+    error._busy = false
+  }
+}
+
+async function handleNotKnown(error, groupIdx) {
+  if (error._busy) return
+  error._busy = true
+  try {
+    await incrementNotKnown(error.id)
+    // 本地同步更新 notKnownCount
+    const group = groups.value[groupIdx]
+    if (group) {
+      const localErr = group.errors.find(e => e.id === error.id)
+      if (localErr) {
+        localErr.notKnownCount = (localErr.notKnownCount || 0) + 1
+      }
+    }
+    showToast(`✕ 已记录（第 ${(error.notKnownCount || 0) + 1} 次不会）`)
+  } catch (e) {
+    console.error('handleNotKnown failed', e)
+    showToast('⚠️ 操作失败')
+  } finally {
+    error._busy = false
+  }
+}
 </script>
 
 <style scoped>
@@ -131,5 +200,61 @@ function formatTime(ts) {
   color: var(--text-secondary);
   margin-top: 1px;
   word-break: break-word;
+}
+.not-known-badge {
+  color: var(--danger);
+  font-size: 0.7rem;
+  margin-left: 4px;
+  opacity: 0.75;
+}
+.action-btns {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.action-btns button {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.action-btns button:active { transform: scale(0.93); }
+.action-btns button:disabled { opacity: 0.4; pointer-events: none; }
+.btn-know {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-not-know {
+  background: transparent;
+  color: var(--danger);
+  border: 1.2px solid var(--danger) !important;
+}
+.btn-not-know:active { background: #FFF0EF; }
+
+.toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: #333;
+  color: #fff;
+  animation: slideDown 0.25s ease;
+  max-width: 80%;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 </style>
