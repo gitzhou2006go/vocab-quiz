@@ -116,13 +116,15 @@ import { DICTIONARIES, WORD_MAP } from '../vocab.js'
 const currentTab = ref('review')
 const groups = ref([])
 
-// 统计 Tab：只显示 notKnownCount > 0 的词
+// 统计 Tab：只显示 notKnownCount > 0 的词，按不会次数从多到少排列
 const statsGroups = computed(() => {
   return groups.value
     .map(g => ({
       ...g,
       collapsed: g.collapsed,
-      errors: g.errors.filter(e => (e.notKnownCount || 0) > 0)
+      errors: g.errors
+        .filter(e => (e.notKnownCount || 0) > 0)
+        .sort((a, b) => (b.notKnownCount || 0) - (a.notKnownCount || 0))
     }))
     .filter(g => g.errors.length > 0)
 })
