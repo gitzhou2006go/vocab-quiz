@@ -255,29 +255,30 @@ async function handleNotKnown(error, groupIdx) {
 <style scoped>
 .tab-bar {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 16px;
-  background: var(--bg);
+  background: var(--card-bg);
   border-radius: var(--radius-pill);
-  padding: 3px;
+  padding: 4px;
+  box-shadow: var(--shadow);
 }
 .tab-bar button {
   flex: 1;
-  padding: 8px 12px;
-  border: none;
+  padding: 10px 12px;
+  border: 1.5px solid var(--primary);
   border-radius: var(--radius-pill);
-  background: transparent;
+  background: var(--card-bg);
   color: var(--text-secondary);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
 .tab-bar button.active {
-  background: var(--card-bg);
-  color: var(--text-primary);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
 }
 
 .error-groups {
