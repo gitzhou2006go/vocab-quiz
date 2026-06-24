@@ -126,14 +126,14 @@ export async function getErrorsByRound() {
 
   const result = Object.entries(groups).map(([roundId, errs]) => ({
     round: rounds.find(r => r.id === Number(roundId)),
-    errors: errs
+    errors: errs.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
   }))
 
   // 按轮次创建时间倒序（最新在上）
   result.sort((a, b) => (b.round?.createdAt || 0) - (a.round?.createdAt || 0))
 
   if (unclassified.length > 0) {
-    result.push({ round: null, errors: unclassified })
+    result.push({ round: null, errors: unclassified.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)) })
   }
 
   return result
