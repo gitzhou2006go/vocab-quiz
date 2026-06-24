@@ -18,7 +18,11 @@
       </router-link>
       <router-link to="/errors" class="tab-item" exact-active-class="tab-active">
         <span class="tab-icon">📕</span>
-        <span class="tab-label">错题本</span>
+        <span class="tab-label">复习</span>
+      </router-link>
+      <router-link to="/stats" class="tab-item" exact-active-class="tab-active">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">统计</span>
       </router-link>
       <router-link to="/rounds" class="tab-item" exact-active-class="tab-active">
         <span class="tab-icon">📊</span>

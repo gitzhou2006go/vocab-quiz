@@ -1,16 +1,8 @@
 <template>
   <div class="page">
-    <h2 class="page-title">📕 错题本</h2>
+    <h2 class="page-title">📕 复习</h2>
 
-    <!-- Tab 切换 -->
-    <div class="tab-bar">
-      <button :class="{ active: currentTab === 'review' }" @click="currentTab = 'review'">📕 复习</button>
-      <button :class="{ active: currentTab === 'stats' }" @click="currentTab = 'stats'">📊 统计</button>
-    </div>
-
-    <!-- ===== 复习 Tab ===== -->
-    <div v-if="currentTab === 'review'">
-      <div v-if="groups.length === 0" class="empty-state">
+    <div v-if="groups.length === 0" class="empty-state">
       <div class="empty-icon">🎉</div>
       <p>还没有错题，继续加油！</p>
     </div>
@@ -57,51 +49,6 @@
         </div>
       </div>
     </div>
-    </div>
-
-    <!-- ===== 统计 Tab ===== -->
-    <div v-if="currentTab === 'stats'">
-      <div v-if="statsGroups.length === 0" class="empty-state">
-        <div class="empty-icon">📊</div>
-        <p>还没有标记「不会」的统计</p>
-      </div>
-
-      <div v-else class="error-groups">
-        <div v-for="(g, gi) in statsGroups" :key="'stats-'+gi" class="card" style="margin-bottom:12px">
-          <div class="round-header" @click="g.collapsed = !g.collapsed">
-            <div style="flex:1">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font-weight:600;font-size:0.9rem">
-                  {{ g.round ? g.round.name : '其他错题' }}
-                </span>
-                <span v-if="g.round" class="pill-tag">{{ getDictName(g.round.dictId) }}</span>
-              </div>
-              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">
-                {{ g.errors.length }} 个词
-                <template v-if="g.round && g.round.createdAt">
-                  · {{ formatTime(g.round.createdAt) }}
-                </template>
-              </div>
-            </div>
-            <span style="font-size:0.9rem;color:var(--text-muted);transition:transform .2s"
-              :style="{ transform: g.collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }"
-            >▼</span>
-          </div>
-
-          <div v-show="!g.collapsed" style="margin-top:8px;border-top:0.5px solid rgba(0,0,0,.05);padding-top:8px">
-            <div v-for="e in g.errors" :key="e.id" class="error-row">
-              <div style="flex:1;min-width:0">
-                <div class="error-title" @click="speak(wordTitle(e.wordId))">{{ wordTitle(e.wordId) }}</div>
-                <div class="error-subtitle">{{ wordSubtitle(e.wordId) }}</div>
-              </div>
-              <div class="action-btns">
-                <span class="count-badge">{{ e.notKnownCount }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Toast -->
     <div v-if="toastMsg" class="toast">{{ toastMsg }}</div>
@@ -109,25 +56,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { getErrorsByRound, deleteError, removeFromRoundPending, incrementNotKnown } from '../db.js'
 import { DICTIONARIES, WORD_MAP } from '../vocab.js'
 
-const currentTab = ref('review')
 const groups = ref([])
-
-// 统计 Tab：只显示 notKnownCount > 0 的词，按不会次数从多到少排列
-const statsGroups = computed(() => {
-  return groups.value
-    .map(g => ({
-      ...g,
-      collapsed: g.collapsed,
-      errors: g.errors
-        .filter(e => (e.notKnownCount || 0) > 0)
-        .sort((a, b) => (b.notKnownCount || 0) - (a.notKnownCount || 0))
-    }))
-    .filter(g => g.errors.length > 0)
-})
 
 onMounted(async () => {
   const raw = await getErrorsByRound()
@@ -206,13 +139,10 @@ async function handleKnown(error, groupIdx) {
   if (error._busy) return
   error._busy = true
   try {
-    // 从 errors store 删除
     await deleteError(error.id)
-    // 如果轮次仍 active，也从 pendingWordIds 移除
     if (error.roundId != null) {
       await removeFromRoundPending(error.roundId, error.wordId)
     }
-    // 从本地列表移除
     const group = groups.value[groupIdx]
     if (group) {
       group.errors = group.errors.filter(e => e.id !== error.id)
@@ -234,7 +164,6 @@ async function handleNotKnown(error, groupIdx) {
   error._busy = true
   try {
     await incrementNotKnown(error.id)
-    // 本地同步更新 notKnownCount
     const group = groups.value[groupIdx]
     if (group) {
       const localErr = group.errors.find(e => e.id === error.id)
@@ -253,34 +182,6 @@ async function handleNotKnown(error, groupIdx) {
 </script>
 
 <style scoped>
-.tab-bar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  background: var(--card-bg);
-  border-radius: var(--radius-pill);
-  padding: 4px;
-  box-shadow: var(--shadow);
-}
-.tab-bar button {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1.5px solid var(--primary);
-  border-radius: var(--radius-pill);
-  background: var(--card-bg);
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-.tab-bar button.active {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-}
-
 .error-groups {
   display: flex;
   flex-direction: column;
