@@ -187,6 +187,8 @@ async function loadRound() {
   } else {
     loadCurrent()
   }
+  knownCount.value = round.value?.knownCount || 0
+  unknownCount.value = round.value?.unknownCount || 0
 }
 
 const completedCount = computed(() => {
@@ -206,19 +208,21 @@ async function advance(known) {
     round.value.pendingWordIds = (round.value.pendingWordIds || []).filter(id => id !== wordId)
 
     if (known) {
-      knownCount.value++
+      round.value.knownCount = (round.value.knownCount || 0) + 1
+      knownCount.value = round.value.knownCount
     } else {
-      unknownCount.value++
+      round.value.unknownCount = (round.value.unknownCount || 0) + 1
+      unknownCount.value = round.value.unknownCount
       const roundId = round.value.id
-	      const errId = 'err_' + roundId + '_' + wordId
-	      const existing = await getAll('errors')
-	      const old = existing.find(e => e.id === errId)
-	      await put('errors', {
-	        id: errId, roundId, wordId,
-	        count: 1,
-	        notKnownCount: 0,
-	        createdAt: Date.now()
-	      })
+      const errId = 'err_' + roundId + '_' + wordId
+      const existing = await getAll('errors')
+      const old = existing.find(e => e.id === errId)
+      await put('errors', {
+        id: errId, roundId, wordId,
+        count: (old?.count || 0) + 1,
+        notKnownCount: (old?.notKnownCount || 0) + 1,
+        createdAt: old?.createdAt || Date.now()
+      })
     }
 
     if (round.value.pendingWordIds.length === 0) {

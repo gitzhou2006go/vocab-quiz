@@ -2,29 +2,41 @@ import { openDB } from 'idb'
 import { uploadAll } from './fb.js'
 
 let db = null
+let dbReady = null
 
 export async function initDB() {
-  db = await openDB('VocabQuizDB', 1, {
+  if (db) return db
+  if (dbReady) return dbReady
+
+  dbReady = openDB('VocabQuizDB', 1, {
     upgrade(db) {
       db.createObjectStore('rounds', { keyPath: 'id' })
       db.createObjectStore('errors', { keyPath: 'id' })
     }
   })
+  db = await dbReady
   return db
 }
 
+async function ensureDB() {
+  return db || await initDB()
+}
+
 export async function getAll(storeName) {
-  return await db.getAll(storeName)
+  const database = await ensureDB()
+  return await database.getAll(storeName)
 }
 
 export async function put(storeName, item) {
-  const r = await db.put(storeName, item)
+  const database = await ensureDB()
+  const r = await database.put(storeName, item)
   scheduleUpload() // 本地写后自动同步到云端
   return r
 }
 
 export async function deleteItem(storeName, id) {
-  const r = await db.delete(storeName, id)
+  const database = await ensureDB()
+  const r = await database.delete(storeName, id)
   scheduleUpload()
   return r
 }
@@ -40,11 +52,12 @@ export async function deleteError(errorId) {
  * 从轮次的 pendingWordIds 中移除指定 wordId（如果轮次仍为 active 状态）
  */
 export async function removeFromRoundPending(roundId, wordId) {
-  const rounds = await db.getAll('rounds')
+  const database = await ensureDB()
+  const rounds = await database.getAll('rounds')
   const round = rounds.find(r => r.id === roundId)
   if (!round || round.status !== 'active') return // 仅 active 轮次才操作
   round.pendingWordIds = (round.pendingWordIds || []).filter(id => id !== wordId)
-  await db.put('rounds', round)
+  await database.put('rounds', round)
   scheduleUpload()
 }
 
@@ -52,17 +65,19 @@ export async function removeFromRoundPending(roundId, wordId) {
  * 增加错词的「不会」计数
  */
 export async function incrementNotKnown(errorId) {
-  const error = await db.get('errors', errorId)
+  const database = await ensureDB()
+  const error = await database.get('errors', errorId)
   if (!error) return
   error.notKnownCount = (error.notKnownCount || 0) + 1
-  await db.put('errors', error)
+  await database.put('errors', error)
   scheduleUpload()
 }
 
 // 以下是 Home.vue 需要的函数
 // 从已有轮次中推断下一个可用 ID，防止刷新后 ID 重置导致覆盖
 export async function initNextRoundId() {
-  const rounds = await db.getAll('rounds')
+  const database = await ensureDB()
+  const rounds = await database.getAll('rounds')
   nextRoundId = rounds.reduce((max, r) => Math.max(max, r.id || 0), 0) + 1
 }
 
@@ -70,11 +85,13 @@ let nextRoundId = 1
 let nextErrorId = 1
 
 export async function getAllRounds() {
-  return await db.getAll('rounds')
+  const database = await ensureDB()
+  return await database.getAll('rounds')
 }
 
 export async function getAllErrors() {
-  return await db.getAll('errors')
+  const database = await ensureDB()
+  return await database.getAll('errors')
 }
 
 export async function createRound(name, wordIds, dictId) {
@@ -85,10 +102,13 @@ export async function createRound(name, wordIds, dictId) {
     dictId,
     totalWords: wordIds.length,
     pendingWordIds: [...wordIds],
+    knownCount: 0,
+    unknownCount: 0,
     status: 'active',
     createdAt: Date.now()
   }
-  await db.put('rounds', round)
+  const database = await ensureDB()
+  await database.put('rounds', round)
   scheduleUpload()
   return round
 }
@@ -109,14 +129,20 @@ export async function getAggregatedErrors() {
  * 无 roundId 的旧数据归入 round=null
  */
 export async function getErrorsByRound() {
-  const [errors, rounds] = await Promise.all([db.getAll('errors'), db.getAll('rounds')])
+  const database = await ensureDB()
+  const [errors, rounds] = await Promise.all([database.getAll('errors'), database.getAll('rounds')])
+  const normalizedErrors = errors.map(e => ({
+    ...e,
+    notKnownCount: e.notKnownCount || e.count || 1
+  }))
+  const findRound = (roundId) => rounds.find(r => String(r.id) === String(roundId))
 
   // 按 roundId 分组
   const groups = {}
   const unclassified = []
 
-  for (const e of errors) {
-    if (e.roundId != null && rounds.find(r => r.id === e.roundId)) {
+  for (const e of normalizedErrors) {
+    if (e.roundId != null && findRound(e.roundId)) {
       if (!groups[e.roundId]) groups[e.roundId] = []
       groups[e.roundId].push(e)
     } else {
@@ -125,15 +151,15 @@ export async function getErrorsByRound() {
   }
 
   const result = Object.entries(groups).map(([roundId, errs]) => ({
-    round: rounds.find(r => r.id === Number(roundId)),
-    errors: errs.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+    round: findRound(roundId),
+    errors: errs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
   }))
 
   // 按轮次创建时间倒序（最新在上）
   result.sort((a, b) => (b.round?.createdAt || 0) - (a.round?.createdAt || 0))
 
   if (unclassified.length > 0) {
-    result.push({ round: null, errors: unclassified.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)) })
+    result.push({ round: null, errors: unclassified.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)) })
   }
 
   return result
@@ -141,7 +167,8 @@ export async function getErrorsByRound() {
 
 // 云端数据覆盖本地 —— 由 listenRemote 触发，不再 scheduleUpload，避免回环
 export async function replaceAllData(rounds, errors) {
-  const tx = db.transaction(['rounds', 'errors'], 'readwrite')
+  const database = await ensureDB()
+  const tx = database.transaction(['rounds', 'errors'], 'readwrite')
   await tx.objectStore('rounds').clear()
   await tx.objectStore('errors').clear()
   for (const r of rounds) await tx.objectStore('rounds').put(r)
@@ -168,7 +195,8 @@ function scheduleUpload() {
   uploadTimer = setTimeout(async () => {
     uploadTimer = null
     try {
-      const [rounds, errors] = await Promise.all([db.getAll('rounds'), db.getAll('errors')])
+      const database = await ensureDB()
+      const [rounds, errors] = await Promise.all([database.getAll('rounds'), database.getAll('errors')])
       await uploadAll(rounds, errors)
     } catch (e) {
       console.error('Auto upload failed', e)

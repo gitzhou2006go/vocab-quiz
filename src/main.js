@@ -23,6 +23,8 @@ initDB().then(async () => {
   // 先用本地数据渲染界面
   await loadActiveRound()
 
+  app.mount('#app')
+
   // 尝试从云端拉取较新数据并落地
   try {
     const data = await downloadAll()
@@ -46,5 +48,3 @@ initDB().then(async () => {
     }
   })
 })
-
-app.mount('#app')
