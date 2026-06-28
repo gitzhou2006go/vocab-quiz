@@ -43,13 +43,18 @@
           <h3>{{ period.label }}</h3>
           <p>{{ periodTimeLabel(period.key) }}</p>
         </div>
-        <div class="period-stats">
-          <span>学习 {{ formatDuration(periodStudyMs(period.key)) }}</span>
-          <span>休息 {{ formatDuration(periodRestMs(period.key)) }}</span>
+        <div class="period-tools">
+          <div class="period-stats">
+            <span>学习 {{ formatDuration(periodStudyMs(period.key)) }}</span>
+            <span>休息 {{ formatDuration(periodRestMs(period.key)) }}</span>
+          </div>
+          <button class="add-task-btn" type="button" @click="toggleTemplatePicker(period.key)">
+            {{ pickerOpenByPeriod[period.key] ? '收起模板' : '添加任务' }}
+          </button>
         </div>
       </div>
 
-      <div class="template-picker">
+      <div v-if="pickerOpenByPeriod[period.key]" class="template-picker">
         <button
           v-for="template in activeTemplates"
           :key="template.id"
@@ -60,6 +65,7 @@
         >
           {{ template.name }}
         </button>
+        <div v-if="activeTemplates.length === 0" class="empty-picker">先在上方添加任务模板</div>
       </div>
 
       <div v-if="plan.periods[period.key].tasks.length === 0" class="empty-period">
@@ -134,6 +140,7 @@ const templates = ref([])
 const allPlans = ref([])
 const selectedChartTemplateId = ref('')
 const newTemplateName = ref('')
+const pickerOpenByPeriod = reactive({ morning: false, afternoon: false, evening: false })
 const tick = ref(Date.now())
 const toastMsg = ref('')
 let timer = null
@@ -209,6 +216,7 @@ async function loadPlan() {
   const data = await getDailyPlan(selectedDate.value)
   Object.assign(plan, normalizePlan(data))
   allPlans.value = await getDailyPlans()
+  closeTemplatePickers()
 }
 
 function normalizePlan(data) {
@@ -256,6 +264,16 @@ function hasTemplate(periodKey, templateId) {
   return plan.periods[periodKey].tasks.some(task => task.templateId === templateId)
 }
 
+function toggleTemplatePicker(periodKey) {
+  pickerOpenByPeriod[periodKey] = !pickerOpenByPeriod[periodKey]
+}
+
+function closeTemplatePickers() {
+  for (const period of PERIODS) {
+    pickerOpenByPeriod[period.key] = false
+  }
+}
+
 async function toggleTemplate(periodKey, template) {
   const tasks = plan.periods[periodKey].tasks
   const existingIndex = tasks.findIndex(task => task.templateId === template.id)
@@ -267,6 +285,7 @@ async function toggleTemplate(periodKey, template) {
     }
     tasks.splice(existingIndex, 1)
     await persistPlan()
+    pickerOpenByPeriod[periodKey] = false
     return
   }
 
@@ -279,6 +298,7 @@ async function toggleTemplate(periodKey, template) {
     runningStart: null
   })
   await persistPlan()
+  pickerOpenByPeriod[periodKey] = false
 }
 
 async function startTask(periodKey, task) {
@@ -494,6 +514,13 @@ function showToast(msg) {
   font-size: 0.78rem;
   color: var(--text-secondary);
 }
+.period-tools {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 .period-stats {
   display: flex;
   gap: 6px;
@@ -508,10 +535,24 @@ function showToast(msg) {
   font-size: 0.76rem;
   font-weight: 700;
 }
+.add-task-btn {
+  border: 1px solid rgba(0, 122, 255, 0.22);
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 6px 11px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
 .template-picker {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--bg);
 }
 .pick-chip {
   border: 1px solid #D1D1D6;
@@ -532,6 +573,11 @@ function showToast(msg) {
 }
 .pick-chip:active {
   transform: scale(0.97);
+}
+.empty-picker {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  padding: 4px 2px;
 }
 .empty-period {
   padding: 18px 4px;
@@ -658,6 +704,10 @@ function showToast(msg) {
   .period-header {
     flex-direction: column;
     align-items: stretch;
+  }
+  .period-tools,
+  .period-stats {
+    justify-content: flex-start;
   }
   .day-summary {
     grid-template-columns: 1fr;
