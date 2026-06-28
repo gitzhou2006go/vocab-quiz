@@ -285,7 +285,6 @@ async function toggleTemplate(periodKey, template) {
     }
     tasks.splice(existingIndex, 1)
     await persistPlan()
-    pickerOpenByPeriod[periodKey] = false
     return
   }
 
@@ -298,7 +297,6 @@ async function toggleTemplate(periodKey, template) {
     runningStart: null
   })
   await persistPlan()
-  pickerOpenByPeriod[periodKey] = false
 }
 
 async function startTask(periodKey, task) {
