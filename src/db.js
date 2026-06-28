@@ -6,10 +6,10 @@ const DB_VERSION = 2
 const STORE_NAMES = ['rounds', 'errors', 'taskTemplates', 'dailyPlans']
 
 const DEFAULT_TASK_TEMPLATES = [
-  { id: 'tpl_math_calc', name: '数学计算', createdAt: 0, archived: false },
-  { id: 'tpl_vocab_20', name: '背单词 20 个', createdAt: 0, archived: false },
-  { id: 'tpl_dictation_lesson', name: '汉字听写一课', createdAt: 0, archived: false },
-  { id: 'tpl_reading', name: '阅读 20 分钟', createdAt: 0, archived: false }
+  { id: 'tpl_math_calc', name: '数学计算', subject: '数学', createdAt: 0, archived: false },
+  { id: 'tpl_vocab_20', name: '背单词 20 个', subject: '英语', createdAt: 0, archived: false },
+  { id: 'tpl_dictation_lesson', name: '汉字听写一课', subject: '语文', createdAt: 0, archived: false },
+  { id: 'tpl_reading', name: '阅读 20 分钟', subject: '语文', createdAt: 0, archived: false }
 ]
 
 let db = null
@@ -218,6 +218,7 @@ export async function saveTaskTemplate(template) {
   const item = {
     id: template.id || `tpl_${now}_${Math.random().toString(36).slice(2, 7)}`,
     name: template.name.trim(),
+    subject: template.subject || '其他',
     createdAt: template.createdAt || now,
     archived: !!template.archived
   }

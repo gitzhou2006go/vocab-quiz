@@ -11,11 +11,15 @@
     <section class="card template-panel">
       <div class="section-title">任务模板</div>
       <form class="template-form" @submit.prevent="addTemplate">
+        <select v-model="newTemplateSubject">
+          <option v-for="subject in SUBJECTS" :key="subject" :value="subject">{{ subject }}</option>
+        </select>
         <input v-model.trim="newTemplateName" placeholder="添加模板，例如：数学计算" />
         <button class="btn btn-primary" type="submit" :disabled="!newTemplateName">添加</button>
       </form>
       <div class="template-list">
         <span v-for="template in activeTemplates" :key="template.id" class="template-chip">
+          <small>{{ templateSubject(template) }}</small>
           {{ template.name }}
           <button type="button" @click="archiveTemplate(template)" title="停用">×</button>
         </span>
@@ -55,16 +59,21 @@
       </div>
 
       <div v-if="pickerOpenByPeriod[period.key]" class="template-picker">
-        <button
-          v-for="template in activeTemplates"
-          :key="template.id"
-          type="button"
-          class="pick-chip"
-          :class="{ selected: hasTemplate(period.key, template.id) }"
-          @click="toggleTemplate(period.key, template)"
-        >
-          {{ template.name }}
-        </button>
+        <div v-for="group in activeTemplateGroups" :key="group.subject" class="picker-group">
+          <div class="picker-subject">{{ group.subject }}</div>
+          <div class="picker-chips">
+            <button
+              v-for="template in group.templates"
+              :key="template.id"
+              type="button"
+              class="pick-chip"
+              :class="{ selected: hasTemplate(period.key, template.id) }"
+              @click="toggleTemplate(period.key, template)"
+            >
+              {{ template.name }}
+            </button>
+          </div>
+        </div>
         <div v-if="activeTemplates.length === 0" class="empty-picker">先在上方添加任务模板</div>
       </div>
 
@@ -82,7 +91,7 @@
           <div class="task-main">
             <div class="task-name">{{ task.name }}</div>
             <div class="task-meta">
-              {{ taskStatus(task) }} · {{ sessionCount(task) }} 次
+              {{ taskSubject(task) }} · {{ taskStatus(task) }} · {{ sessionCount(task) }} 次
             </div>
           </div>
           <div class="task-time">{{ formatDuration(taskDurationMs(task)) }}</div>
@@ -95,22 +104,57 @@
     </section>
 
     <section class="card chart-panel">
-      <div class="section-title">模板每日耗时</div>
+      <div class="section-title">时间段统计</div>
       <div class="chart-toolbar">
-        <select v-model="selectedChartTemplateId">
-          <option v-for="template in templates" :key="template.id" :value="template.id">
-            {{ template.name }}
-          </option>
+        <input class="stats-date-input" type="date" v-model="selectedStatsDate" />
+        <select v-model="selectedStatsPeriodKey">
+          <option v-for="period in PERIODS" :key="period.key" :value="period.key">{{ period.label }}</option>
         </select>
       </div>
-      <div v-if="chartBars.length === 0" class="empty-period">暂无数据</div>
-      <div v-else class="bar-chart">
-        <div v-for="bar in chartBars" :key="bar.date" class="bar-item">
-          <div class="bar-track">
-            <div class="bar-fill" :style="{ height: bar.height + '%' }"></div>
+      <div class="stats-summary">
+        <span>学习 {{ formatDuration(statsStudyMs) }}</span>
+        <span>其他 {{ formatDuration(statsOtherMs) }}</span>
+        <span>{{ statsPeriodLabel }}</span>
+      </div>
+
+      <div class="stats-block">
+        <div class="stats-block-title">任务耗时</div>
+        <div v-if="statsTaskBars.length === 0" class="empty-period">这个时间段还没有任务耗时</div>
+        <div v-else class="duration-chart">
+          <div v-for="bar in statsTaskBars" :key="bar.key" class="duration-row">
+            <div class="duration-label">{{ bar.label }}</div>
+            <div class="duration-track">
+              <div class="duration-fill task-fill" :style="{ width: bar.width + '%' }"></div>
+            </div>
+            <div class="duration-value">{{ formatShortDuration(bar.ms) }}</div>
           </div>
-          <span class="bar-value">{{ formatShortDuration(bar.ms) }}</span>
-          <span class="bar-label">{{ bar.label }}</span>
+        </div>
+      </div>
+
+      <div class="stats-block">
+        <div class="stats-block-title">科目耗时</div>
+        <div v-if="statsSubjectBars.length === 0" class="empty-period">这个时间段还没有科目耗时</div>
+        <div v-else class="duration-chart">
+          <div v-for="bar in statsSubjectBars" :key="bar.key" class="duration-row">
+            <div class="duration-label">{{ bar.label }}</div>
+            <div class="duration-track">
+              <div class="duration-fill subject-fill" :style="{ width: bar.width + '%' }"></div>
+            </div>
+            <div class="duration-value">{{ formatShortDuration(bar.ms) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-block">
+        <div class="stats-block-title">其他时间</div>
+        <div class="duration-chart">
+          <div class="duration-row">
+            <div class="duration-label">没有任务</div>
+            <div class="duration-track">
+              <div class="duration-fill other-fill" :style="{ width: statsOtherBarWidth + '%' }"></div>
+            </div>
+            <div class="duration-value">{{ formatShortDuration(statsOtherMs) }}</div>
+          </div>
         </div>
       </div>
     </section>
@@ -134,17 +178,23 @@ const PERIODS = [
   { key: 'afternoon', label: '下午' },
   { key: 'evening', label: '晚上' }
 ]
+const SUBJECTS = ['语文', '数学', '英语', '其他']
+const DEFAULT_SUBJECT = '其他'
+const MAX_TASK_MS = 60 * 60 * 1000
 
 const selectedDate = ref(todayKey())
 const templates = ref([])
 const allPlans = ref([])
-const selectedChartTemplateId = ref('')
 const newTemplateName = ref('')
+const newTemplateSubject = ref('数学')
+const selectedStatsDate = ref(todayKey())
+const selectedStatsPeriodKey = ref(currentPeriodKey())
 const pickerOpenByPeriod = reactive({ morning: false, afternoon: false, evening: false })
 const tick = ref(Date.now())
 const toastMsg = ref('')
 let timer = null
 let toastTimer = null
+let autoStopSaving = false
 
 const plan = reactive({
   date: selectedDate.value,
@@ -154,6 +204,14 @@ const plan = reactive({
 })
 
 const activeTemplates = computed(() => templates.value.filter(t => !t.archived))
+const activeTemplateGroups = computed(() => {
+  return SUBJECTS
+    .map(subject => ({
+      subject,
+      templates: activeTemplates.value.filter(template => templateSubject(template) === subject)
+    }))
+    .filter(group => group.templates.length > 0)
+})
 
 const activeTask = computed(() => {
   for (const period of PERIODS) {
@@ -169,34 +227,47 @@ const completedTaskCount = computed(() => PERIODS.reduce((sum, p) => {
   return sum + plan.periods[p.key].tasks.filter(t => !t.runningStart && sessionCount(t) > 0).length
 }, 0))
 
-const chartBars = computed(() => {
-  if (!selectedChartTemplateId.value) return []
-  const rows = allPlans.value
-    .slice()
-    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
-    .slice(-14)
-    .map(dayPlan => {
-      const ms = PERIODS.reduce((sum, period) => {
-        const tasks = dayPlan.periods?.[period.key]?.tasks || []
-        return sum + tasks
-          .filter(task => task.templateId === selectedChartTemplateId.value)
-          .reduce((taskSum, task) => taskSum + taskDurationMs(task, false), 0)
-      }, 0)
-      return {
-        date: dayPlan.date,
-        label: dayPlan.date.slice(5),
-        ms
-      }
-    })
+const selectedStatsPlan = computed(() => getPlanForDate(selectedStatsDate.value))
+const selectedStatsPeriod = computed(() => selectedStatsPlan.value.periods[selectedStatsPeriodKey.value] || createEmptyPeriodState())
+const statsStudyMs = computed(() => periodStudyMsFromPeriod(selectedStatsPeriod.value, selectedStatsDate.value === selectedDate.value))
+const statsOtherMs = computed(() => periodOtherMsFromPeriod(selectedStatsPeriod.value, selectedStatsDate.value === selectedDate.value))
+const statsPeriodLabel = computed(() => {
+  const period = PERIODS.find(p => p.key === selectedStatsPeriodKey.value)
+  return `${selectedStatsDate.value} ${period?.label || ''}`
+})
+const statsTaskBars = computed(() => {
+  const rows = (selectedStatsPeriod.value.tasks || [])
+    .map(task => ({
+      key: task.id,
+      label: task.name,
+      ms: taskDurationMs(task, selectedStatsDate.value === selectedDate.value)
+    }))
     .filter(row => row.ms > 0)
-  const max = Math.max(...rows.map(row => row.ms), 1)
-  return rows.map(row => ({ ...row, height: Math.max(8, Math.round((row.ms / max) * 100)) }))
+  return withBarWidths(rows)
+})
+const statsSubjectBars = computed(() => {
+  const totals = {}
+  for (const task of selectedStatsPeriod.value.tasks || []) {
+    const subject = taskSubject(task)
+    totals[subject] = (totals[subject] || 0) + taskDurationMs(task, selectedStatsDate.value === selectedDate.value)
+  }
+  const rows = Object.entries(totals)
+    .map(([subject, ms]) => ({ key: subject, label: subject, ms }))
+    .filter(row => row.ms > 0)
+  return withBarWidths(rows)
+})
+const statsOtherBarWidth = computed(() => {
+  const max = Math.max(statsStudyMs.value, statsOtherMs.value, 1)
+  return Math.max(statsOtherMs.value > 0 ? 8 : 0, Math.round((statsOtherMs.value / max) * 100))
 })
 
 onMounted(async () => {
   await loadTemplates()
   await loadPlan()
-  timer = setInterval(() => { tick.value = Date.now() }, 1000)
+  timer = setInterval(() => {
+    tick.value = Date.now()
+    enforceAutoStopTasks().catch(() => {})
+  }, 1000)
 })
 
 onUnmounted(() => {
@@ -207,9 +278,6 @@ watch(selectedDate, loadPlan)
 
 async function loadTemplates() {
   templates.value = await getTaskTemplates()
-  if (!selectedChartTemplateId.value && templates.value.length > 0) {
-    selectedChartTemplateId.value = templates.value[0].id
-  }
 }
 
 async function loadPlan() {
@@ -217,6 +285,7 @@ async function loadPlan() {
   Object.assign(plan, normalizePlan(data))
   allPlans.value = await getDailyPlans()
   closeTemplatePickers()
+  await enforceAutoStopTasks()
 }
 
 function normalizePlan(data) {
@@ -234,7 +303,8 @@ function normalizePlan(data) {
       tasks: (normalized.periods[period.key]?.tasks || []).map(task => ({
         sessions: [],
         runningStart: null,
-        ...task
+        ...task,
+        subject: task.subject || inferSubjectFromName(task.name)
       }))
     }
   }
@@ -249,10 +319,9 @@ async function persistPlan() {
 async function addTemplate() {
   const name = newTemplateName.value.trim()
   if (!name) return
-  const item = await saveTaskTemplate({ name })
+  await saveTaskTemplate({ name, subject: newTemplateSubject.value })
   newTemplateName.value = ''
   await loadTemplates()
-  selectedChartTemplateId.value = item.id
 }
 
 async function archiveTemplate(template) {
@@ -262,6 +331,26 @@ async function archiveTemplate(template) {
 
 function hasTemplate(periodKey, templateId) {
   return plan.periods[periodKey].tasks.some(task => task.templateId === templateId)
+}
+
+function templateSubject(template) {
+  return normalizeSubject(template?.subject || inferSubjectFromName(template?.name))
+}
+
+function taskSubject(task) {
+  const template = templates.value.find(item => item.id === task.templateId)
+  return normalizeSubject(task?.subject || template?.subject || inferSubjectFromName(task?.name || template?.name))
+}
+
+function normalizeSubject(subject) {
+  return SUBJECTS.includes(subject) ? subject : DEFAULT_SUBJECT
+}
+
+function inferSubjectFromName(name = '') {
+  if (name.includes('数学') || name.includes('计算')) return '数学'
+  if (name.includes('英语') || name.includes('单词') || name.includes('vocab')) return '英语'
+  if (name.includes('语文') || name.includes('汉字') || name.includes('听写') || name.includes('阅读')) return '语文'
+  return DEFAULT_SUBJECT
 }
 
 function toggleTemplatePicker(periodKey) {
@@ -292,6 +381,7 @@ async function toggleTemplate(periodKey, template) {
     id: `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     templateId: template.id,
     name: template.name,
+    subject: templateSubject(template),
     createdAt: Date.now(),
     sessions: [],
     runningStart: null
@@ -300,6 +390,7 @@ async function toggleTemplate(periodKey, template) {
 }
 
 async function startTask(periodKey, task) {
+  await enforceAutoStopTasks()
   if (activeTask.value) {
     showToast('请先结束当前任务')
     return
@@ -315,38 +406,88 @@ async function startTask(periodKey, task) {
 async function stopTask(periodKey, task) {
   if (!task.runningStart) return
   const now = Date.now()
-  task.sessions.push({ start: task.runningStart, end: now })
+  const end = Math.min(now, task.runningStart + MAX_TASK_MS)
+  task.sessions.push({ start: task.runningStart, end })
   task.runningStart = null
   const period = plan.periods[periodKey]
   if (!period.tasks.some(t => t.runningStart)) {
-    period.endedAt = now
+    period.endedAt = end
   }
+  if (now - end > 0) showToast('超过 1 小时，已按 1 小时结束计时')
   await persistPlan()
+}
+
+async function enforceAutoStopTasks() {
+  if (autoStopSaving) return
+  const now = Date.now()
+  let changed = false
+  for (const periodInfo of PERIODS) {
+    const period = plan.periods[periodInfo.key]
+    for (const task of period.tasks) {
+      if (!task.runningStart || now - task.runningStart < MAX_TASK_MS) continue
+      const end = task.runningStart + MAX_TASK_MS
+      task.sessions.push({ start: task.runningStart, end })
+      task.runningStart = null
+      changed = true
+      if (!period.tasks.some(t => t.runningStart)) {
+        period.endedAt = end
+      }
+    }
+  }
+  if (!changed) return
+  autoStopSaving = true
+  try {
+    await persistPlan()
+    showToast('任务已超过 1 小时，系统已自动结束')
+  } finally {
+    autoStopSaving = false
+  }
 }
 
 function periodStudyMs(periodKey) {
   tick.value
-  return plan.periods[periodKey].tasks.reduce((sum, task) => sum + taskDurationMs(task), 0)
+  return periodStudyMsFromPeriod(plan.periods[periodKey], true)
 }
 
 function periodRestMs(periodKey) {
   tick.value
-  const period = plan.periods[periodKey]
+  return periodOtherMsFromPeriod(plan.periods[periodKey], true)
+}
+
+function periodStudyMsFromPeriod(period, includeRunning = true) {
+  return (period?.tasks || []).reduce((sum, task) => sum + taskDurationMs(task, includeRunning), 0)
+}
+
+function periodOtherMsFromPeriod(period, includeRunning = true) {
   if (!period.startedAt) return 0
-  const end = period.endedAt || (period.tasks.some(t => t.runningStart) ? Date.now() : period.startedAt)
-  return Math.max(0, end - period.startedAt - periodStudyMs(periodKey))
+  const end = period.endedAt || ((period.tasks || []).some(t => t.runningStart) && includeRunning ? Date.now() : period.startedAt)
+  return Math.max(0, end - period.startedAt - periodStudyMsFromPeriod(period, includeRunning))
 }
 
 function taskDurationMs(task, includeRunning = true) {
   tick.value
   const finished = (task.sessions || []).reduce((sum, session) => {
     if (!session.start || !session.end) return sum
-    return sum + Math.max(0, session.end - session.start)
+    return sum + Math.min(MAX_TASK_MS, Math.max(0, session.end - session.start))
   }, 0)
   if (includeRunning && task.runningStart) {
-    return finished + Math.max(0, Date.now() - task.runningStart)
+    return finished + Math.min(MAX_TASK_MS, Math.max(0, Date.now() - task.runningStart))
   }
   return finished
+}
+
+function getPlanForDate(date) {
+  if (date === selectedDate.value) return plan
+  const found = allPlans.value.find(dayPlan => dayPlan.date === date)
+  return normalizePlan(found || { date, periods: emptyPeriods(), createdAt: Date.now(), updatedAt: Date.now() })
+}
+
+function withBarWidths(rows) {
+  const max = Math.max(...rows.map(row => row.ms), 1)
+  return rows.map(row => ({
+    ...row,
+    width: Math.max(row.ms > 0 ? 8 : 0, Math.round((row.ms / max) * 100))
+  }))
 }
 
 function sessionCount(task) {
@@ -394,12 +535,23 @@ function todayKey() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function currentPeriodKey() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'morning'
+  if (hour < 18) return 'afternoon'
+  return 'evening'
+}
+
 function emptyPeriods() {
   return {
-    morning: { startedAt: null, endedAt: null, tasks: [] },
-    afternoon: { startedAt: null, endedAt: null, tasks: [] },
-    evening: { startedAt: null, endedAt: null, tasks: [] }
+    morning: createEmptyPeriodState(),
+    afternoon: createEmptyPeriodState(),
+    evening: createEmptyPeriodState()
   }
+}
+
+function createEmptyPeriodState() {
+  return { startedAt: null, endedAt: null, tasks: [] }
 }
 
 function showToast(msg) {
@@ -424,6 +576,8 @@ function showToast(msg) {
   padding-bottom: 2px;
 }
 .date-input,
+.stats-date-input,
+.template-form select,
 .template-form input,
 .chart-toolbar select {
   border: 1px solid #D1D1D6;
@@ -444,7 +598,7 @@ function showToast(msg) {
 }
 .template-form {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 120px 1fr auto;
   gap: 10px;
 }
 .template-list {
@@ -463,6 +617,12 @@ function showToast(msg) {
   color: var(--primary);
   font-size: 0.84rem;
   font-weight: 700;
+}
+.template-chip small {
+  border-radius: 999px;
+  background: rgba(0, 122, 255, 0.12);
+  padding: 2px 7px;
+  font-size: 0.68rem;
 }
 .template-chip button {
   border: 0;
@@ -546,11 +706,25 @@ function showToast(msg) {
 }
 .template-picker {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
   padding: 10px;
   border-radius: 12px;
   background: var(--bg);
+}
+.picker-group {
+  display: grid;
+  gap: 7px;
+}
+.picker-subject {
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+.picker-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .pick-chip {
   border: 1px solid #D1D1D6;
@@ -643,43 +817,81 @@ function showToast(msg) {
   color: var(--danger);
 }
 .chart-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 10px;
   margin-bottom: 12px;
 }
-.bar-chart {
+.stats-summary {
   display: flex;
-  align-items: end;
+  flex-wrap: wrap;
   gap: 8px;
-  min-height: 180px;
-  padding-top: 10px;
-  overflow-x: auto;
+  margin-bottom: 14px;
 }
-.bar-item {
-  min-width: 42px;
+.stats-summary span {
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 5px 10px;
+}
+.stats-block {
   display: grid;
-  grid-template-rows: 1fr auto auto;
-  justify-items: center;
-  gap: 5px;
-  height: 180px;
+  gap: 8px;
+  padding-top: 12px;
 }
-.bar-track {
-  width: 24px;
-  height: 120px;
-  border-radius: 8px;
+.stats-block + .stats-block {
+  margin-top: 6px;
+  border-top: 1px solid #EFEFF4;
+}
+.stats-block-title {
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+.duration-chart {
+  display: grid;
+  gap: 9px;
+}
+.duration-row {
+  display: grid;
+  grid-template-columns: minmax(76px, 1fr) 2fr 58px;
+  gap: 9px;
+  align-items: center;
+}
+.duration-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.duration-track {
+  height: 12px;
+  border-radius: 999px;
   background: #E8E8ED;
-  display: flex;
-  align-items: end;
   overflow: hidden;
 }
-.bar-fill {
-  width: 100%;
-  min-height: 4px;
-  border-radius: 8px 8px 0 0;
-  background: linear-gradient(180deg, #34C759, #007AFF);
+.duration-fill {
+  height: 100%;
+  min-width: 0;
+  border-radius: 999px;
 }
-.bar-value,
-.bar-label {
-  font-size: 0.68rem;
+.task-fill {
+  background: linear-gradient(90deg, #007AFF, #5AC8FA);
+}
+.subject-fill {
+  background: linear-gradient(90deg, #34C759, #30D158);
+}
+.other-fill {
+  background: linear-gradient(90deg, #FF9500, #FFD60A);
+}
+.duration-value {
   color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-align: right;
   white-space: nowrap;
 }
 .toast {
@@ -713,6 +925,13 @@ function showToast(msg) {
   .template-form,
   .task-row {
     grid-template-columns: 1fr;
+  }
+  .chart-toolbar,
+  .duration-row {
+    grid-template-columns: 1fr;
+  }
+  .duration-value {
+    text-align: left;
   }
   .task-time {
     text-align: left;
