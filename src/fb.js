@@ -37,16 +37,26 @@ export let cloudVersion = 0
 /**
  * 上传全部数据到 Firebase
  */
-export async function uploadAll(rounds, errors) {
+export async function uploadAll(dataOrRounds, maybeErrors) {
   try {
+    const data = Array.isArray(dataOrRounds)
+      ? { rounds: dataOrRounds, errors: maybeErrors || [], taskTemplates: [], dailyPlans: [] }
+      : {
+          rounds: dataOrRounds?.rounds || [],
+          errors: dataOrRounds?.errors || [],
+          taskTemplates: dataOrRounds?.taskTemplates || [],
+          dailyPlans: dataOrRounds?.dailyPlans || []
+        }
     cloudVersion++
     await Promise.race([
       setDoc(syncRef, {
-        rounds: rounds.map(r => ({
+        rounds: data.rounds.map(r => ({
           ...r,
           pendingWordIds: r.pendingWordIds ? [...r.pendingWordIds] : []
         })),
-        errors: errors.map(e => ({ ...e })),
+        errors: data.errors.map(e => ({ ...e })),
+        taskTemplates: data.taskTemplates.map(t => ({ ...t })),
+        dailyPlans: data.dailyPlans.map(p => ({ ...p })),
         version: cloudVersion,
         updatedAt: Date.now()
       }),
@@ -109,7 +119,11 @@ export function listenRemote(callback) {
     if (remoteVer <= cloudVersion) return
     // 🛡️ 保护：远程数据为空时不覆盖本地，防止误清空
     //    （应用没有「上传空数据」的合法场景，空数据视为异常）
-    const isEmpty = (!data.rounds || data.rounds.length === 0) && (!data.errors || data.errors.length === 0)
+    const isEmpty =
+      (!data.rounds || data.rounds.length === 0) &&
+      (!data.errors || data.errors.length === 0) &&
+      (!data.taskTemplates || data.taskTemplates.length === 0) &&
+      (!data.dailyPlans || data.dailyPlans.length === 0)
     if (isEmpty) {
       cloudVersion = remoteVer // 更新版本号，避免重复触发
       console.warn('收到空数据，已跳过本地覆盖')

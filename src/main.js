@@ -30,7 +30,7 @@ initDB().then(async () => {
     const data = await downloadAll()
     if (data && data.version > 0 && Array.isArray(data.rounds)) {
       console.log('Downloaded data from cloud, version:', data.version)
-      await replaceAllData(data.rounds, data.errors || [])
+      await replaceAllData(data)
       await loadActiveRound()
     }
   } catch (err) {
@@ -41,7 +41,7 @@ initDB().then(async () => {
   listenRemote(async (data) => {
     console.log('Remote data changed, version:', data.version)
     try {
-      await replaceAllData(data.rounds || [], data.errors || [])
+      await replaceAllData(data)
       await loadActiveRound()
     } catch (e) {
       console.error('Apply remote data failed', e)

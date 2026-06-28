@@ -20,6 +20,10 @@
         <span class="tab-icon">📕</span>
         <span class="tab-label">复习</span>
       </router-link>
+      <router-link to="/planner" class="tab-item" exact-active-class="tab-active">
+        <span class="tab-icon">时</span>
+        <span class="tab-label">学习</span>
+      </router-link>
       <router-link to="/stats" class="tab-item" exact-active-class="tab-active">
         <span class="tab-icon">📊</span>
         <span class="tab-label">统计</span>
@@ -158,7 +162,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 .tab-icon { font-size: 1.6rem; line-height: 1.4; }
-.tab-label { font-size: 0.75rem; font-weight: 500; margin-top: 2px; }
+.tab-label { font-size: 0.68rem; font-weight: 500; margin-top: 2px; }
 .tab-active { color: var(--primary); }
 
 /* ===== Shared Components ===== */

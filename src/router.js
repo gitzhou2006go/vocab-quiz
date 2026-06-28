@@ -5,6 +5,7 @@ import ErrorBook from './views/ErrorBook.vue'
 import Stats from './views/Stats.vue'
 import Rounds from './views/Rounds.vue'
 import Dictation from './views/Dictation.vue'
+import Planner from './views/Planner.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -12,7 +13,8 @@ const routes = [
   { path: '/errors', component: ErrorBook },
   { path: '/stats', component: Stats },
   { path: '/rounds', component: Rounds },
-  { path: '/dictation', component: Dictation }
+  { path: '/dictation', component: Dictation },
+  { path: '/planner', component: Planner }
 ]
 
 const router = createRouter({

@@ -59,6 +59,10 @@
     </button>
 
     <!-- 快捷入口 -->
+    <button class="btn btn-secondary btn-block planner-entry" @click="$router.push('/planner')">
+      每日学习安排
+    </button>
+
     <button class="btn btn-secondary btn-block dictation-entry" @click="$router.push('/dictation')">
       汉字拼音听写
     </button>
@@ -161,7 +165,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { store, loadActiveRound } from '../store.js'
-import { createRound, getAggregatedErrors, getAllRounds, deleteItem, getAll, replaceAllData } from '../db.js'
+import { createRound, getAggregatedErrors, getAllRounds, deleteItem, getAllData, replaceAllData } from '../db.js'
 import { downloadAll, testPing } from '../fb.js'
 import { DICTIONARIES, WORD_MAP, getDictWords } from '../vocab.js'
 
@@ -291,11 +295,6 @@ async function forceRefresh() {
 
 // ===== 数据备份 =====
 
-async function getAllData() {
-  const [rounds, errors] = await Promise.all([getAll('rounds'), getAll('errors')])
-  return { rounds, errors, exportedAt: Date.now() }
-}
-
 async function exportData() {
   try {
     const data = await getAllData()
@@ -323,7 +322,7 @@ async function importData(e) {
     if (!data.rounds || !data.errors) {
       throw new Error('无效的备份文件')
     }
-    await replaceAllData(data.rounds, data.errors)
+    await replaceAllData(data)
     await loadActiveRound()
     errorStats.value = await getAggregatedErrors()
     githubMsg.value = `✅ 已恢复 ${data.rounds.length} 轮 · ${data.errors.length} 条错题`
@@ -382,7 +381,7 @@ async function downloadFromGithub() {
     if (!resp.ok) throw new Error('没有找到备份文件 (HTTP ' + resp.status + ')')
     const data = await resp.json()
     if (!data.rounds || !data.errors) throw new Error('无效的备份文件')
-    await replaceAllData(data.rounds, data.errors)
+    await replaceAllData(data)
     await loadActiveRound()
     errorStats.value = await getAggregatedErrors()
     githubMsg.value = `✅ 已从 GitHub 恢复（${data.rounds.length} 轮 · ${data.errors.length} 条错题）`
@@ -427,6 +426,7 @@ async function confirmDelete(r) {
 
 .dict-row { cursor: pointer; transition: background 0.15s; -webkit-tap-highlight-color: transparent; }
 .dict-row:active { background: rgba(0,122,255,0.03); }
+.planner-entry { margin-top: 0; color: #6E4B00; background: #FFF4D6; }
 .dictation-entry { margin-top: 0; color: #0A7A4B; background: #E8F8E8; }
 .dict-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #C7C7CC; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
 .radio-on { border-color: var(--primary); background: var(--primary); }

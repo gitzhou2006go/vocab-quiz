@@ -1,25 +1,54 @@
 import { openDB } from 'idb'
 import { uploadAll } from './fb.js'
 
+const DB_NAME = 'VocabQuizDB'
+const DB_VERSION = 2
+const STORE_NAMES = ['rounds', 'errors', 'taskTemplates', 'dailyPlans']
+
+const DEFAULT_TASK_TEMPLATES = [
+  { id: 'tpl_math_calc', name: '数学计算', createdAt: 0, archived: false },
+  { id: 'tpl_vocab_20', name: '背单词 20 个', createdAt: 0, archived: false },
+  { id: 'tpl_dictation_lesson', name: '汉字听写一课', createdAt: 0, archived: false },
+  { id: 'tpl_reading', name: '阅读 20 分钟', createdAt: 0, archived: false }
+]
+
 let db = null
 let dbReady = null
+let nextRoundId = 1
 
 export async function initDB() {
   if (db) return db
   if (dbReady) return dbReady
 
-  dbReady = openDB('VocabQuizDB', 1, {
-    upgrade(db) {
-      db.createObjectStore('rounds', { keyPath: 'id' })
-      db.createObjectStore('errors', { keyPath: 'id' })
+  dbReady = openDB(DB_NAME, DB_VERSION, {
+    upgrade(database) {
+      for (const storeName of STORE_NAMES) {
+        if (!database.objectStoreNames.contains(storeName)) {
+          database.createObjectStore(storeName, { keyPath: storeName === 'dailyPlans' ? 'date' : 'id' })
+        }
+      }
     }
   })
   db = await dbReady
+  await seedDefaultTaskTemplates()
   return db
 }
 
 async function ensureDB() {
   return db || await initDB()
+}
+
+async function seedDefaultTaskTemplates() {
+  const database = db || await dbReady
+  const existing = await database.getAll('taskTemplates')
+  if (existing.length > 0) return
+
+  const now = Date.now()
+  const tx = database.transaction('taskTemplates', 'readwrite')
+  for (const template of DEFAULT_TASK_TEMPLATES) {
+    await tx.objectStore('taskTemplates').put({ ...template, createdAt: now })
+  }
+  await tx.done
 }
 
 export async function getAll(storeName) {
@@ -29,41 +58,31 @@ export async function getAll(storeName) {
 
 export async function put(storeName, item) {
   const database = await ensureDB()
-  const r = await database.put(storeName, item)
-  scheduleUpload() // 本地写后自动同步到云端
-  return r
+  const result = await database.put(storeName, item)
+  scheduleUpload()
+  return result
 }
 
 export async function deleteItem(storeName, id) {
   const database = await ensureDB()
-  const r = await database.delete(storeName, id)
+  const result = await database.delete(storeName, id)
   scheduleUpload()
-  return r
+  return result
 }
 
-/**
- * 删除一条错题记录
- */
 export async function deleteError(errorId) {
   return await deleteItem('errors', errorId)
 }
 
-/**
- * 从轮次的 pendingWordIds 中移除指定 wordId（如果轮次仍为 active 状态）
- */
 export async function removeFromRoundPending(roundId, wordId) {
   const database = await ensureDB()
-  const rounds = await database.getAll('rounds')
-  const round = rounds.find(r => r.id === roundId)
-  if (!round || round.status !== 'active') return // 仅 active 轮次才操作
+  const round = await database.get('rounds', roundId)
+  if (!round || round.status !== 'active') return
   round.pendingWordIds = (round.pendingWordIds || []).filter(id => id !== wordId)
   await database.put('rounds', round)
   scheduleUpload()
 }
 
-/**
- * 增加错词的「不会」计数
- */
 export async function incrementNotKnown(errorId) {
   const database = await ensureDB()
   const error = await database.get('errors', errorId)
@@ -73,25 +92,17 @@ export async function incrementNotKnown(errorId) {
   scheduleUpload()
 }
 
-// 以下是 Home.vue 需要的函数
-// 从已有轮次中推断下一个可用 ID，防止刷新后 ID 重置导致覆盖
 export async function initNextRoundId() {
-  const database = await ensureDB()
-  const rounds = await database.getAll('rounds')
-  nextRoundId = rounds.reduce((max, r) => Math.max(max, r.id || 0), 0) + 1
+  const rounds = await getAll('rounds')
+  nextRoundId = rounds.reduce((max, r) => Math.max(max, Number(r.id) || 0), 0) + 1
 }
 
-let nextRoundId = 1
-let nextErrorId = 1
-
 export async function getAllRounds() {
-  const database = await ensureDB()
-  return await database.getAll('rounds')
+  return await getAll('rounds')
 }
 
 export async function getAllErrors() {
-  const database = await ensureDB()
-  return await database.getAll('errors')
+  return await getAll('errors')
 }
 
 export async function createRound(name, wordIds, dictId) {
@@ -107,9 +118,7 @@ export async function createRound(name, wordIds, dictId) {
     status: 'active',
     createdAt: Date.now()
   }
-  const database = await ensureDB()
-  await database.put('rounds', round)
-  scheduleUpload()
+  await put('rounds', round)
   return round
 }
 
@@ -139,9 +148,8 @@ export async function createDictationRound(course, lesson, unknownItems) {
   await tx.objectStore('rounds').put(round)
 
   for (const item of unknownItems) {
-    const errId = `err_${id}_${item.id}`
     await tx.objectStore('errors').put({
-      id: errId,
+      id: `err_${id}_${item.id}`,
       roundId: id,
       wordId: item.id,
       type: 'dictation',
@@ -168,30 +176,22 @@ export async function getAggregatedErrors() {
   return Object.values(stats)
 }
 
-/**
- * 按轮次分组获取错题
- * 返回 [{ round, errors: [...] }]，按轮次时间倒序
- * 无 roundId 的旧数据归入 round=null
- */
 export async function getErrorsByRound() {
-  const database = await ensureDB()
-  const [errors, rounds] = await Promise.all([database.getAll('errors'), database.getAll('rounds')])
+  const [errors, rounds] = await Promise.all([getAll('errors'), getAll('rounds')])
   const normalizedErrors = errors.map(e => ({
     ...e,
     notKnownCount: e.notKnownCount || e.count || 1
   }))
   const findRound = (roundId) => rounds.find(r => String(r.id) === String(roundId))
-
-  // 按 roundId 分组
   const groups = {}
   const unclassified = []
 
-  for (const e of normalizedErrors) {
-    if (e.roundId != null && findRound(e.roundId)) {
-      if (!groups[e.roundId]) groups[e.roundId] = []
-      groups[e.roundId].push(e)
+  for (const error of normalizedErrors) {
+    if (error.roundId != null && findRound(error.roundId)) {
+      if (!groups[error.roundId]) groups[error.roundId] = []
+      groups[error.roundId].push(error)
     } else {
-      unclassified.push(e)
+      unclassified.push(error)
     }
   }
 
@@ -199,8 +199,6 @@ export async function getErrorsByRound() {
     round: findRound(roundId),
     errors: errs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
   }))
-
-  // 按轮次创建时间倒序（最新在上）
   result.sort((a, b) => (b.round?.createdAt || 0) - (a.round?.createdAt || 0))
 
   if (unclassified.length > 0) {
@@ -210,23 +208,102 @@ export async function getErrorsByRound() {
   return result
 }
 
-// 云端数据覆盖本地 —— 由 listenRemote 触发，不再 scheduleUpload，避免回环
-export async function replaceAllData(rounds, errors) {
+export async function getTaskTemplates() {
+  const templates = await getAll('taskTemplates')
+  return templates.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+}
+
+export async function saveTaskTemplate(template) {
+  const now = Date.now()
+  const item = {
+    id: template.id || `tpl_${now}_${Math.random().toString(36).slice(2, 7)}`,
+    name: template.name.trim(),
+    createdAt: template.createdAt || now,
+    archived: !!template.archived
+  }
+  await put('taskTemplates', item)
+  return item
+}
+
+export async function getDailyPlan(date) {
   const database = await ensureDB()
-  const tx = database.transaction(['rounds', 'errors'], 'readwrite')
-  await tx.objectStore('rounds').clear()
-  await tx.objectStore('errors').clear()
-  for (const r of rounds) await tx.objectStore('rounds').put(r)
-  for (const e of errors) await tx.objectStore('errors').put(e)
+  return await database.get('dailyPlans', date) || createEmptyDailyPlan(date)
+}
+
+export async function saveDailyPlan(plan) {
+  await put('dailyPlans', { ...plan, updatedAt: Date.now() })
+}
+
+export async function getDailyPlans() {
+  const plans = await getAll('dailyPlans')
+  return plans.sort((a, b) => String(b.date).localeCompare(String(a.date)))
+}
+
+export function createEmptyDailyPlan(date) {
+  return {
+    date,
+    periods: {
+      morning: createEmptyPeriod(),
+      afternoon: createEmptyPeriod(),
+      evening: createEmptyPeriod()
+    },
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  }
+}
+
+function createEmptyPeriod() {
+  return {
+    startedAt: null,
+    endedAt: null,
+    tasks: []
+  }
+}
+
+export async function getAllData() {
+  const database = await ensureDB()
+  const [rounds, errors, taskTemplates, dailyPlans] = await Promise.all([
+    database.getAll('rounds'),
+    database.getAll('errors'),
+    database.getAll('taskTemplates'),
+    database.getAll('dailyPlans')
+  ])
+  return { rounds, errors, taskTemplates, dailyPlans, exportedAt: Date.now() }
+}
+
+export async function replaceAllData(dataOrRounds, maybeErrors, maybeTaskTemplates, maybeDailyPlans) {
+  const data = Array.isArray(dataOrRounds)
+    ? {
+        rounds: dataOrRounds,
+        errors: maybeErrors || [],
+        taskTemplates: maybeTaskTemplates || [],
+        dailyPlans: maybeDailyPlans || []
+      }
+    : {
+        rounds: dataOrRounds?.rounds || [],
+        errors: dataOrRounds?.errors || [],
+        taskTemplates: dataOrRounds?.taskTemplates || [],
+        dailyPlans: dataOrRounds?.dailyPlans || []
+      }
+
+  const database = await ensureDB()
+  const tx = database.transaction(STORE_NAMES, 'readwrite')
+  for (const storeName of STORE_NAMES) {
+    await tx.objectStore(storeName).clear()
+  }
+  for (const r of data.rounds) await tx.objectStore('rounds').put(r)
+  for (const e of data.errors) await tx.objectStore('errors').put(e)
+  for (const t of data.taskTemplates) await tx.objectStore('taskTemplates').put(t)
+  for (const p of data.dailyPlans) await tx.objectStore('dailyPlans').put(p)
   await tx.done
+
+  await seedDefaultTaskTemplates()
   await initNextRoundId()
 }
 
-// ====== 云端同步：debounce 上传，避免频繁写 Firebase ======
 let uploadTimer = null
 let skipNextUpload = false
 
-// 云端覆盖本地后调用，防止 replaceAllData 触发的逻辑回灌
 export function pauseSyncOnce() {
   skipNextUpload = true
 }
@@ -240,9 +317,7 @@ function scheduleUpload() {
   uploadTimer = setTimeout(async () => {
     uploadTimer = null
     try {
-      const database = await ensureDB()
-      const [rounds, errors] = await Promise.all([database.getAll('rounds'), database.getAll('errors')])
-      await uploadAll(rounds, errors)
+      await uploadAll(await getAllData())
     } catch (e) {
       console.error('Auto upload failed', e)
     }
