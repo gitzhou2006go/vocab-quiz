@@ -49,14 +49,17 @@
         </div>
       </div>
 
-      <div class="add-row">
-        <select v-model="selectedTemplateByPeriod[period.key]">
-          <option value="">选择模板</option>
-          <option v-for="template in activeTemplates" :key="template.id" :value="template.id">
-            {{ template.name }}
-          </option>
-        </select>
-        <button class="btn btn-secondary" @click="addTask(period.key)" :disabled="!selectedTemplateByPeriod[period.key]">加入</button>
+      <div class="template-picker">
+        <button
+          v-for="template in activeTemplates"
+          :key="template.id"
+          type="button"
+          class="pick-chip"
+          :class="{ selected: hasTemplate(period.key, template.id) }"
+          @click="toggleTemplate(period.key, template)"
+        >
+          {{ template.name }}
+        </button>
       </div>
 
       <div v-if="plan.periods[period.key].tasks.length === 0" class="empty-period">
@@ -131,7 +134,6 @@ const templates = ref([])
 const allPlans = ref([])
 const selectedChartTemplateId = ref('')
 const newTemplateName = ref('')
-const selectedTemplateByPeriod = reactive({ morning: '', afternoon: '', evening: '' })
 const tick = ref(Date.now())
 const toastMsg = ref('')
 let timer = null
@@ -250,10 +252,25 @@ async function archiveTemplate(template) {
   await loadTemplates()
 }
 
-async function addTask(periodKey) {
-  const template = templates.value.find(t => t.id === selectedTemplateByPeriod[periodKey])
-  if (!template) return
-  plan.periods[periodKey].tasks.push({
+function hasTemplate(periodKey, templateId) {
+  return plan.periods[periodKey].tasks.some(task => task.templateId === templateId)
+}
+
+async function toggleTemplate(periodKey, template) {
+  const tasks = plan.periods[periodKey].tasks
+  const existingIndex = tasks.findIndex(task => task.templateId === template.id)
+  if (existingIndex >= 0) {
+    const existing = tasks[existingIndex]
+    if (existing.runningStart) {
+      showToast('请先结束该任务')
+      return
+    }
+    tasks.splice(existingIndex, 1)
+    await persistPlan()
+    return
+  }
+
+  tasks.push({
     id: `task_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     templateId: template.id,
     name: template.name,
@@ -261,7 +278,6 @@ async function addTask(periodKey) {
     sessions: [],
     runningStart: null
   })
-  selectedTemplateByPeriod[periodKey] = ''
   await persistPlan()
 }
 
@@ -391,7 +407,6 @@ function showToast(msg) {
 }
 .date-input,
 .template-form input,
-.add-row select,
 .chart-toolbar select {
   border: 1px solid #D1D1D6;
   border-radius: 10px;
@@ -493,10 +508,30 @@ function showToast(msg) {
   font-size: 0.76rem;
   font-weight: 700;
 }
-.add-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
+.template-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pick-chip {
+  border: 1px solid #D1D1D6;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-primary);
+  padding: 9px 13px;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pick-chip.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+.pick-chip:active {
+  transform: scale(0.97);
 }
 .empty-period {
   padding: 18px 4px;
@@ -628,7 +663,6 @@ function showToast(msg) {
     grid-template-columns: 1fr;
   }
   .template-form,
-  .add-row,
   .task-row {
     grid-template-columns: 1fr;
   }
