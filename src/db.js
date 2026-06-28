@@ -255,8 +255,12 @@ export function createEmptyDailyPlan(date) {
 
 function createEmptyPeriod() {
   return {
-    startedAt: null,
-    endedAt: null,
+    subjects: {
+      '语文': { sessions: [], runningStart: null },
+      '数学': { sessions: [], runningStart: null },
+      '英语': { sessions: [], runningStart: null },
+      '其他': { sessions: [], runningStart: null }
+    },
     tasks: []
   }
 }
