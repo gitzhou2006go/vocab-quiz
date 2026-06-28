@@ -1,56 +1,48 @@
 <template>
   <div class="page">
-    <h2 class="page-title">📕 复习</h2>
+    <h2 class="page-title">复习</h2>
 
     <div v-if="groups.length === 0" class="empty-state">
-      <div class="empty-icon">🎉</div>
-      <p>还没有错题，继续加油！</p>
+      <div class="empty-icon">✓</div>
+      <p>还没有错题</p>
     </div>
 
     <div v-else class="error-groups">
       <div v-for="(g, gi) in groups" :key="gi" class="card" style="margin-bottom:12px">
-        <!-- 轮次标题（可点击折叠） -->
-        <div
-          class="round-header"
-          @click="g.collapsed = !g.collapsed"
-        >
+        <div class="round-header" @click="g.collapsed = !g.collapsed">
           <div style="flex:1">
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-weight:600;font-size:0.9rem">
                 {{ g.round ? g.round.name : '其他错题' }}
               </span>
-              <span v-if="g.round" class="pill-tag">{{ getDictName(g.round.dictId) }}</span>
+              <span v-if="g.round" class="pill-tag">{{ getDictName(g.round) }}</span>
             </div>
             <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">
-              {{ g.errors.length }} 个错词
+              {{ g.errors.length }} 项
               <template v-if="g.round && g.round.createdAt">
                 · {{ formatTime(g.round.createdAt) }}
               </template>
             </div>
           </div>
-          <span style="font-size:0.9rem;color:var(--text-muted);transition:transform .2s"
-            :style="{ transform: g.collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }"
-          >▼</span>
+          <span class="collapse-mark" :style="{ transform: g.collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }">▼</span>
         </div>
 
-        <!-- 错词列表 -->
-        <div v-show="!g.collapsed" style="margin-top:8px;border-top:0.5px solid rgba(0,0,0,.05);padding-top:8px">
+        <div v-show="!g.collapsed" class="error-list">
           <div v-for="e in g.errors" :key="e.id" class="error-row">
             <div style="flex:1;min-width:0">
-              <div class="error-title" @click="speak(wordTitle(e.wordId))">{{ wordTitle(e.wordId) }}</div>
+              <div class="error-title" @click="speakItem(e)">{{ wordTitle(e.wordId) }}</div>
               <div class="error-subtitle">{{ wordSubtitle(e.wordId) }}</div>
             </div>
             <div class="action-btns">
               <span class="count-badge">{{ e.notKnownCount || 0 }}</span>
-              <button class="btn-know" @click="handleKnown(e, gi)" :disabled="e._busy">✓ 会</button>
-              <button class="btn-not-know" @click="handleNotKnown(e, gi)" :disabled="e._busy">✕ 不会</button>
+              <button class="btn-know" @click="handleKnown(e, gi)" :disabled="e._busy">会</button>
+              <button class="btn-not-know" @click="handleNotKnown(e, gi)" :disabled="e._busy">不会</button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Toast -->
     <div v-if="toastMsg" class="toast">{{ toastMsg }}</div>
   </div>
 </template>
@@ -58,7 +50,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getErrorsByRound, deleteError, removeFromRoundPending, incrementNotKnown } from '../db.js'
-import { DICTIONARIES, WORD_MAP } from '../vocab.js'
+import { getSourceName, getStudyItem } from '../items.js'
+import { speakText } from '../speech.js'
 
 const groups = ref([])
 
@@ -67,27 +60,16 @@ onMounted(async () => {
   groups.value = raw.map(g => ({ ...g, collapsed: false }))
 })
 
-function getDictName(dictId) {
-  const d = DICTIONARIES.find(x => x.id === dictId)
-  return d ? d.name : '未知词库'
-}
-
-function getWord(wordId) {
-  return WORD_MAP[wordId] || null
+function getDictName(round) {
+  return getSourceName(round)
 }
 
 function wordTitle(wordId) {
-  const w = WORD_MAP[wordId]
-  if (!w) return '未知'
-  return w.en || w.title || '未知'
+  return getStudyItem(wordId).title
 }
 
 function wordSubtitle(wordId) {
-  const w = WORD_MAP[wordId]
-  if (!w) return ''
-  if (w.zh) return w.zh
-  if (w.author) return w.author
-  return ''
+  return getStudyItem(wordId).subtitle
 }
 
 function formatTime(ts) {
@@ -101,7 +83,6 @@ function formatTime(ts) {
   } catch { return '' }
 }
 
-// ===== Toast =====
 const toastMsg = ref('')
 let toastTimer = null
 
@@ -111,30 +92,11 @@ function showToast(msg) {
   toastTimer = setTimeout(() => { toastMsg.value = ''; toastTimer = null }, 2000)
 }
 
-// ===== 发音 =====
-function speak(word) {
-  if (!word) return
-  if ('speechSynthesis' in window && window.speechSynthesis) {
-    try {
-      window.speechSynthesis.cancel()
-      try { window.speechSynthesis.getVoices() } catch (_) {}
-      const u = new SpeechSynthesisUtterance(word)
-      u.lang = 'en-US'
-      u.rate = 0.9
-      u.pitch = 1.0
-      window.speechSynthesis.speak(u)
-      return
-    } catch (_) {}
-  }
-  // fallback: 有道语音
-  try {
-    const url = 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(word) + '&type=1'
-    const audio = new Audio(url)
-    audio.play().catch(() => {})
-  } catch (_) {}
+async function speakItem(error) {
+  const item = getStudyItem(error.wordId)
+  await speakText(item.speakText, { lang: item.speakLang, rate: item.speakLang === 'zh-CN' ? 0.85 : 0.9 })
 }
 
-// ===== 会 / 不会 操作 =====
 async function handleKnown(error, groupIdx) {
   if (error._busy) return
   error._busy = true
@@ -150,10 +112,10 @@ async function handleKnown(error, groupIdx) {
         groups.value = groups.value.filter((_, idx) => idx !== groupIdx)
       }
     }
-    showToast('✓ 已标记为掌握')
+    showToast('已标记为会')
   } catch (e) {
     console.error('handleKnown failed', e)
-    showToast('⚠️ 操作失败')
+    showToast('操作失败')
   } finally {
     error._busy = false
   }
@@ -171,10 +133,10 @@ async function handleNotKnown(error, groupIdx) {
         localErr.notKnownCount = (localErr.notKnownCount || 0) + 1
       }
     }
-    showToast(`✕ 已记录（第 ${(error.notKnownCount || 0) + 1} 次不会）`)
+    showToast(`已记录第 ${(error.notKnownCount || 0) + 1} 次不会`)
   } catch (e) {
     console.error('handleNotKnown failed', e)
-    showToast('⚠️ 操作失败')
+    showToast('操作失败')
   } finally {
     error._busy = false
   }
@@ -197,6 +159,16 @@ async function handleNotKnown(error, groupIdx) {
 }
 .round-header:active {
   opacity: 0.7;
+}
+.collapse-mark {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  transition: transform .2s;
+}
+.error-list {
+  margin-top: 8px;
+  border-top: 0.5px solid rgba(0,0,0,.05);
+  padding-top: 8px;
 }
 .error-row {
   display: flex;
@@ -263,7 +235,6 @@ async function handleNotKnown(error, groupIdx) {
   border: 1.2px solid var(--danger) !important;
 }
 .btn-not-know:active { background: #FFF0EF; }
-
 .toast {
   position: fixed;
   top: 24px;

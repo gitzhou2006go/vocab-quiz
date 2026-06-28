@@ -97,6 +97,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { store, loadActiveRound } from '../store.js'
 import { getAll, put } from '../db.js'
 import { DICTIONARIES, WORD_MAP } from '../vocab.js'
+import { speakText } from '../speech.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -125,7 +126,7 @@ function getDictName(dictId) {
 const speaking = ref(false)
 let speechTimer = null
 
-function speak(word) {
+async function speak(word) {
   if (!word) return
   if (speaking.value) {
     window.speechSynthesis?.cancel()
@@ -135,6 +136,14 @@ function speak(word) {
   showToast('🔊 播放中', 'success')
   clearTimeout(speechTimer)
   speechTimer = setTimeout(() => { speaking.value = false; showToast('') }, 4000)
+
+  const ok = await speakText(word, { lang: 'en-US', rate: 0.9, pitch: 1.0 })
+  if (!ok) {
+    showToast('语音不可用', 'error')
+    speaking.value = false
+    clearTimeout(speechTimer)
+  }
+  return
 
   if ('speechSynthesis' in window && window.speechSynthesis) {
     try {

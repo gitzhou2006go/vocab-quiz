@@ -59,6 +59,10 @@
     </button>
 
     <!-- 快捷入口 -->
+    <button class="btn btn-secondary btn-block dictation-entry" @click="$router.push('/dictation')">
+      汉字拼音听写
+    </button>
+
     <div style="display:flex;gap:10px;margin-top:4px">
       <button class="btn btn-secondary" style="flex:1" @click="$router.push('/errors')">
         📕 错题本
@@ -423,6 +427,7 @@ async function confirmDelete(r) {
 
 .dict-row { cursor: pointer; transition: background 0.15s; -webkit-tap-highlight-color: transparent; }
 .dict-row:active { background: rgba(0,122,255,0.03); }
+.dictation-entry { margin-top: 0; color: #0A7A4B; background: #E8F8E8; }
 .dict-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #C7C7CC; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
 .radio-on { border-color: var(--primary); background: var(--primary); }
 .radio-dot { width: 8px; height: 8px; border-radius: 50%; background: white; }

@@ -113,6 +113,51 @@ export async function createRound(name, wordIds, dictId) {
   return round
 }
 
+export async function createDictationRound(course, lesson, unknownItems) {
+  const id = nextRoundId++
+  const now = Date.now()
+  const allItems = lesson.items || []
+  const unknownIds = unknownItems.map(item => item.id)
+  const round = {
+    id,
+    name: `${course.name} ${lesson.name}`,
+    dictId: 'dictation',
+    type: 'dictation',
+    courseId: course.id,
+    lessonId: lesson.id,
+    totalWords: allItems.length,
+    pendingWordIds: [],
+    knownCount: allItems.length - unknownIds.length,
+    unknownCount: unknownIds.length,
+    status: 'completed',
+    createdAt: now,
+    completedAt: now
+  }
+
+  const database = await ensureDB()
+  const tx = database.transaction(['rounds', 'errors'], 'readwrite')
+  await tx.objectStore('rounds').put(round)
+
+  for (const item of unknownItems) {
+    const errId = `err_${id}_${item.id}`
+    await tx.objectStore('errors').put({
+      id: errId,
+      roundId: id,
+      wordId: item.id,
+      type: 'dictation',
+      courseId: course.id,
+      lessonId: lesson.id,
+      count: 1,
+      notKnownCount: 1,
+      createdAt: now
+    })
+  }
+
+  await tx.done
+  scheduleUpload()
+  return round
+}
+
 export async function getAggregatedErrors() {
   const errors = await getAllErrors()
   const stats = {}
