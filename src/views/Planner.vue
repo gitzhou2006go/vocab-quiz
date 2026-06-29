@@ -114,6 +114,7 @@
                 <input
                   type="checkbox"
                   :checked="task.completed"
+                  :disabled="task.completed"
                   @change="toggleTaskComplete(period.key, task)"
                 />
                 <span class="task-name">{{ task.name }}</span>
@@ -380,6 +381,7 @@ async function toggleTemplate(periodKey, template) {
 }
 
 async function toggleTaskComplete(periodKey, task) {
+  if (task.completed) return
   task.completed = !task.completed
   task.completedAt = task.completed ? Date.now() : null
   await persistPlan()
