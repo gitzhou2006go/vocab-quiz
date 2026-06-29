@@ -174,7 +174,7 @@ const PERIODS = [
 ]
 const SUBJECTS = ['语文', '数学', '英语', '其他']
 const DEFAULT_SUBJECT = '其他'
-const MAX_SUBJECT_MS = 60 * 60 * 1000
+const MAX_SUBJECT_MS = 8 * 60 * 60 * 1000
 
 const selectedDate = ref(todayKey())
 const templates = ref([])
@@ -405,7 +405,7 @@ async function stopSubject(periodKey, subject) {
   const end = Math.min(now, subj.runningStart + MAX_SUBJECT_MS)
   subj.sessions.push({ start: subj.runningStart, end })
   subj.runningStart = null
-  if (now - end > 0) showToast('超过 1 小时，已按 1 小时结束计时')
+  if (now - end > 0) showToast('超过 8 小时，已按 8 小时结束计时')
   await persistPlan()
 }
 
@@ -428,7 +428,7 @@ async function enforceAutoStopSubjects() {
   autoStopSaving = true
   try {
     await persistPlan()
-    showToast('科目已超过 1 小时，系统已自动结束')
+    showToast('科目已超过 8 小时，系统已自动结束')
   } finally {
     autoStopSaving = false
   }
