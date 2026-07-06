@@ -12,10 +12,12 @@
       <div style="text-align:center;font-size:0.88rem;color:var(--text-secondary);margin-top:8px">
         {{ completedCount }} / {{ round.totalWords }}
       </div>
-      <div v-if="knownCount + unknownCount > 0" style="text-align:center;font-size:0.82rem;margin-top:4px">
-        <span style="color:var(--success)">✅ 认识 {{ knownCount }}</span>
+      <div v-if="sessionKnown + sessionUnknown > 0" style="text-align:center;font-size:0.82rem;margin-top:4px">
+        <span style="color:var(--text-secondary)">本次</span>
         <span style="margin:0 6px;color:var(--text-muted)">·</span>
-        <span style="color:var(--danger)">❌ 不认识 {{ unknownCount }}</span>
+        <span style="color:var(--success)">✅ 认识 {{ sessionKnown }}</span>
+        <span style="margin:0 6px;color:var(--text-muted)">·</span>
+        <span style="color:var(--danger)">❌ 不认识 {{ sessionUnknown }}</span>
       </div>
     </div>
 
@@ -68,15 +70,18 @@
       <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:20px">本轮完成！</h3>
       <div class="done-stats">
         <div class="done-stat">
-          <div style="font-size:2rem;font-weight:700;color:var(--success)">{{ knownCount }}</div>
-          <div style="font-size:0.8rem;color:var(--text-secondary)">认识</div>
+          <div style="font-size:2rem;font-weight:700;color:var(--success)">{{ sessionKnown }}</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary)">本次认识</div>
         </div>
         <div class="done-divider"></div>
         <div class="done-stat">
-          <div style="font-size:2rem;font-weight:700;color:var(--danger)">{{ unknownCount }}</div>
-          <div style="font-size:0.8rem;color:var(--text-secondary)">不认识</div>
+          <div style="font-size:2rem;font-weight:700;color:var(--danger)">{{ sessionUnknown }}</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary)">本次不认识</div>
         </div>
       </div>
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-top:-8px;margin-bottom:20px">
+        整轮累计 · 认识 {{ knownCount }} / 不认识 {{ unknownCount }}
+      </p>
       <p v-if="unknownCount > 0" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:20px">
         {{ unknownCount }} 个错词已记入错题本
       </p>
@@ -107,6 +112,9 @@ const currentWord = ref(null)
 const showZh = ref(false)
 const knownCount = ref(0)
 const unknownCount = ref(0)
+// 本次进入（会话）的会/不会计数，每次加载轮次时归零
+const sessionKnown = ref(0)
+const sessionUnknown = ref(0)
 const toastMsg = ref('')
 const toastType = ref('')
 let toastTimer = null
@@ -198,6 +206,9 @@ async function loadRound() {
   }
   knownCount.value = round.value?.knownCount || 0
   unknownCount.value = round.value?.unknownCount || 0
+  // 会话计数归零：每次进入/切换轮次都从 0 开始统计本次
+  sessionKnown.value = 0
+  sessionUnknown.value = 0
 }
 
 const completedCount = computed(() => {
@@ -219,9 +230,11 @@ async function advance(known) {
     if (known) {
       round.value.knownCount = (round.value.knownCount || 0) + 1
       knownCount.value = round.value.knownCount
+      sessionKnown.value++
     } else {
       round.value.unknownCount = (round.value.unknownCount || 0) + 1
       unknownCount.value = round.value.unknownCount
+      sessionUnknown.value++
       const roundId = round.value.id
       const errId = 'err_' + roundId + '_' + wordId
       const existing = await getAll('errors')
