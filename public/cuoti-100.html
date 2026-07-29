@@ -754,10 +754,10 @@ function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// 生成"友好"数字：约 40% 概率返回 10 的倍数（便于小孩子凑整快速复核），否则随机
-function num(min, max) {
+// 生成"友好"数字：force 为 true 时强制返回 10 的倍数；否则约 40% 概率返回 10 的倍数
+function num(min, max, force) {
   if (max < min) max = min;
-  if (Math.random() < 0.4) {
+  if (force || Math.random() < 0.4) {
     const lo = Math.ceil(min / 10), hi = Math.floor(max / 10);
     if (hi >= lo) return randInt(lo, hi) * 10;
   }
@@ -796,90 +796,91 @@ function makeQuestion(nCount) {
 
 // ====== Generate 2-number questions ======
 function gen2Num() {
+  const R = Math.random() < 0.3; // 约 30% 的题整道凑整（如 200 - 90）
   if (Math.random() < 0.5) {
-    // a + b
-    const a = num(10, 900);
-    const b = num(10, 1000 - a);
+    const a = num(10, 900, R);
+    const b = num(10, 1000 - a, R);
     return { expr: a + " + " + b, answer: a + b, nCount: 2 };
   }
-  // a - b
-  const a = num(20, 999);
-  const b = num(10, a - 1);
+  const a = num(20, 999, R);
+  const b = num(10, a - 1, R);
   return { expr: a + " - " + b, answer: a - b, nCount: 2 };
 }
 
 // ====== Generate 3-number questions ======
 function gen3Num() {
+  const R = Math.random() < 0.3; // 约 30% 的题整道凑整
   const t = Math.floor(Math.random() * 4);
   if (t === 0) {
     // a + b + c
-    const a = num(10, 500);
-    const b = num(10, Math.min(500, 990 - a));
-    const c = num(5, 1000 - a - b);
+    const a = num(10, 500, R);
+    const b = num(10, Math.min(500, 990 - a), R);
+    const c = num(5, 1000 - a - b, R);
     return { expr: a + " + " + b + " + " + c, answer: a + b + c, nCount: 3 };
   }
   if (t === 1) {
     // a - b - c
-    const a = num(200, 1000);
-    const b = num(10, Math.max(10, Math.min(400, a - 11)));
-    const c = num(5, Math.max(5, Math.min(300, a - b - 1)));
+    const a = num(200, 1000, R);
+    const b = num(10, Math.max(10, Math.min(400, a - 11)), R);
+    const c = num(5, Math.max(5, Math.min(300, a - b - 1)), R);
     return { expr: a + " - " + b + " - " + c, answer: a - b - c, nCount: 3 };
   }
   if (t === 2) {
     // a + b - c
-    const a = num(10, 600), b = num(10, 600);
+    const a = num(10, 600, R), b = num(10, 600, R);
     const sum = a + b;
     const lo = Math.max(10, sum - 1000), hi = sum - 1;
     if (hi < lo) return gen3Num();
-    const c = num(lo, hi);
+    const c = num(lo, hi, R);
     return { expr: a + " + " + b + " - " + c, answer: sum - c, nCount: 3 };
   }
   // t === 3: a - b + c
-  const a = num(100, 900);
-  const b = num(10, a - 1);
+  const a = num(100, 900, R);
+  const b = num(10, a - 1, R);
   const diff = a - b;
-  const c = num(5, Math.max(5, Math.min(500, 1000 - diff)));
+  const c = num(5, Math.max(5, Math.min(500, 1000 - diff)), R);
   return { expr: a + " - " + b + " + " + c, answer: diff + c, nCount: 3 };
 }
 
 // ====== Generate 4-number questions ======
 function gen4Num() {
+  const R = Math.random() < 0.3; // 约 30% 的题整道凑整
   const t = Math.floor(Math.random() * 4);
   if (t === 0) {
     // a + b + c + d
-    const a = num(5, 300), b = num(5, 300), c = num(5, 200);
+    const a = num(5, 300, R), b = num(5, 300, R), c = num(5, 200, R);
     const hi = 1000 - a - b - c;
     if (hi < 5) return gen4Num();
-    const d = num(5, Math.min(300, hi));
+    const d = num(5, Math.min(300, hi), R);
     return { expr: a + " + " + b + " + " + c + " + " + d, answer: a + b + c + d, nCount: 4 };
   }
   if (t === 1) {
     // a - b - c - d
-    const a = num(300, 1000);
-    const b = num(10, Math.max(10, Math.min(300, a - 21)));
-    const c = num(10, Math.max(10, Math.min(200, a - b - 11)));
-    const d = num(5, Math.max(5, Math.min(150, a - b - c - 1)));
+    const a = num(300, 1000, R);
+    const b = num(10, Math.max(10, Math.min(300, a - 21)), R);
+    const c = num(10, Math.max(10, Math.min(200, a - b - 11)), R);
+    const d = num(5, Math.max(5, Math.min(150, a - b - c - 1)), R);
     return { expr: a + " - " + b + " - " + c + " - " + d, answer: a - b - c - d, nCount: 4 };
   }
   if (t === 2) {
     // a + b + c - d
-    const a = num(10, 400), b = num(10, 400), c = num(10, 300);
+    const a = num(10, 400, R), b = num(10, 400, R), c = num(10, 300, R);
     const sum = a + b + c;
     const lo = Math.max(10, sum - 1000), hi = sum - 1;
     if (hi < lo) return gen4Num();
-    const d = num(lo, hi);
+    const d = num(lo, hi, R);
     return { expr: a + " + " + b + " + " + c + " - " + d, answer: sum - d, nCount: 4 };
   }
   // t === 3: a + b - c - d
-  const a = num(100, 600), b = num(50, 500);
+  const a = num(100, 600, R), b = num(50, 500, R);
   const sum = a + b;
   const cHi = Math.min(400, sum - 11);
   if (cHi < 10) return gen4Num();
-  const c = num(10, cHi);
+  const c = num(10, cHi, R);
   const mid = sum - c; // a + b - c >= 11
   const dLo = Math.max(5, mid - 1000), dHi = mid - 1;
   if (dHi < dLo) return gen4Num();
-  const d = num(dLo, dHi);
+  const d = num(dLo, dHi, R);
   return { expr: a + " + " + b + " - " + c + " - " + d, answer: mid - d, nCount: 4 };
 }
 
