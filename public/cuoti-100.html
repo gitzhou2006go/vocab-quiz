@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>错题100道 - 连加连减（1000以内）</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #C7EDCC;
+    --card-bg: #eafbea;
+    --white: #ffffff;
+    --primary: #2e7d32;
+    --primary-light: #66bb6a;
+    --primary-dark: #1b5e20;
+    --primary-bg: #e8f5e9;
+    --green: #2e7d32;
+    --green-light: #c8e6c9;
+    --green-bg: #e8f5e9;
+    --red: #c62828;
+    --red-light: #ffcdd2;
+    --red-bg: #ffebee;
+    --orange: #ef6c00;
+    --orange-light: #ffe0b2;
+    --gray-50: #f1f8e9;
+    --gray-100: #dcedc8;
+    --gray-200: #c5e1a5;
+    --gray-300: #aed581;
+    --gray-400: #7cb342;
+    --gray-500: #689f38;
+    --gray-600: #558b2f;
+    --gray-700: #33691e;
+    --gray-800: #1b5e20;
+    --gray-900: #0d3b0f;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: #2e3a1f;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* ====== Start Screen ====== */
+  #startScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  #startScreen .logo {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  #startScreen h1 {
+    font-size: 2.5rem;
+    color: var(--primary-dark);
+    margin-bottom: 0.5rem;
+    letter-spacing: 2px;
+  }
+
+  #startScreen .subtitle {
+    font-size: 1.2rem;
+    color: var(--gray-500);
+    margin-bottom: 2rem;
+  }
+
+  #startScreen .info-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 2rem 3rem;
+    box-shadow: 0 4px 24px rgba(46,125,50,0.1);
+    max-width: 560px;
+    width: 100%;
+    margin-bottom: 2rem;
+    border: 1px solid var(--green-light);
+  }
+
+  #startScreen .info-card .info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--green-light);
+  }
+
+  #startScreen .info-card .info-row:last-child { border-bottom: none; }
+
+  #startScreen .info-card .label {
+    color: var(--gray-600);
+    font-size: 1rem;
+  }
+
+  #startScreen .info-card .value {
+    font-weight: 700;
+    color: var(--primary-dark);
+    font-size: 1.1rem;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 14px 48px;
+    font-size: 1.2rem;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: all 0.2s;
+    box-shadow: 0 4px 14px rgba(46,125,50,0.25);
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(46,125,50,0.35);
+  }
+
+  .btn-primary:disabled {
+    background: var(--gray-200);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* ====== Quiz Screen ====== */
+  #quizScreen { display: none; }
+
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(199,237,204,0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--green-light);
+    box-shadow: 0 2px 8px rgba(46,125,50,0.06);
+  }
+
+  .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .header h1 {
+    font-size: 1.1rem;
+    color: var(--primary-dark);
+    white-space: nowrap;
+  }
+
+  .progress-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .progress-bar-bg {
+    flex: 1;
+    height: 12px;
+    background: var(--green-light);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+    border-radius: 6px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .progress-text {
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  /* Question Grid */
+  .questions-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .num-count-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    color: var(--gray-500);
+  }
+  .num-count-label span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .num-count-label .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+  .dot.d2 { background: #90caf9; }
+  .dot.d3 { background: #4fc3f7; }
+  .dot.d4 { background: #03a9f4; }
+
+  .questions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .q-card {
+    background: #d9f0da;
+    border: 2px solid var(--green-light);
+    border-radius: 12px;
+    padding: 10px 10px 12px;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .q-card.num2 { border-left: 4px solid #90caf9; }
+  .q-card.num3 { border-left: 4px solid #4fc3f7; }
+  .q-card.num4 { border-left: 4px solid #03a9f4; }
+
+  .q-card.answered {
+    border-color: var(--primary-light);
+    background: #bce0bd;
+  }
+
+  .q-card .q-num {
+    position: absolute;
+    top: -8px;
+    left: 10px;
+    background: var(--green-light);
+    color: var(--primary-dark);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    line-height: 1.4;
+  }
+
+  .q-card.answered .q-num {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .q-expr {
+    font-size: 1.64rem;
+    font-weight: 600;
+    color: #2e3a1f;
+    text-align: center;
+    margin-top: 6px;
+    margin-bottom: 8px;
+    font-family: "Courier New", monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .q-expr .equals {
+    color: var(--gray-400);
+    margin: 0 4px;
+  }
+
+  .q-expr .answer {
+    color: var(--primary-dark);
+    font-weight: 800;
+  }
+
+  .q-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .q-btn {
+    flex: 1;
+    padding: 7px 0;
+    border: 2px solid var(--green-light);
+    background: #c5e8c6;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--gray-600);
+  }
+
+  .q-btn:hover {
+    border-color: var(--primary-light);
+    background: var(--primary-bg);
+  }
+
+  .q-btn.selected-correct {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+  }
+
+  .q-btn.selected-wrong {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff;
+  }
+
+  /* Footer */
+  .footer-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(199,237,204,0.96);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--green-light);
+    box-shadow: 0 -2px 12px rgba(46,125,50,0.06);
+    padding: 12px 20px;
+    z-index: 100;
+  }
+
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .footer-info {
+    font-size: 0.9rem;
+    color: var(--gray-600);
+  }
+
+  .footer-info .remaining {
+    color: var(--red);
+    font-weight: 700;
+  }
+
+  .btn-submit {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 10px 32px;
+    font-size: 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+
+  .btn-submit:hover:not(:disabled) {
+    background: var(--primary-dark);
+  }
+
+  .btn-submit:disabled {
+    background: var(--gray-200);
+    cursor: not-allowed;
+  }
+
+  /* ====== Result Screen ====== */
+  #resultScreen { display: none; }
+
+  .result-header {
+    text-align: center;
+    padding: 40px 20px 20px;
+  }
+
+  .result-header .score-circle {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: var(--white);
+    border: 6px solid var(--green-light);
+  }
+
+  .result-header .score-circle .score-num {
+    font-size: 2.8rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .result-header .score-circle .score-label {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+    margin-top: 2px;
+  }
+
+  .result-header h2 {
+    font-size: 1.8rem;
+    color: var(--primary-dark);
+    margin-bottom: 8px;
+  }
+
+  .result-header .score-subtitle {
+    font-size: 1rem;
+    color: var(--gray-500);
+  }
+
+  .stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    max-width: 900px;
+    margin: 0 auto 30px;
+    padding: 0 20px;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+    min-width: 120px;
+    box-shadow: 0 2px 8px rgba(46,125,50,0.06);
+    border: 1px solid var(--green-light);
+  }
+
+  .stat-card .stat-num {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .stat-card .stat-label {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+  }
+
+  .stat-card.green .stat-num { color: var(--green); }
+  .stat-card.red .stat-num { color: var(--red); }
+  .stat-card.blue .stat-num { color: #1565c0; }
+  .stat-card.gray .stat-num { color: var(--gray-600); }
+  .stat-card.orange .stat-num { color: var(--orange); }
+
+  .review-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+  }
+
+  .review-section h3 {
+    font-size: 1.1rem;
+    color: var(--gray-700);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .review-section h3 .filter-btns {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+  }
+
+  .filter-btn {
+    font-size: 0.8rem;
+    padding: 4px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--green-light);
+    background: var(--white);
+    cursor: pointer;
+    color: var(--gray-600);
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+
+  .filter-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+
+  .review-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+  }
+
+  .review-card {
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 2px solid var(--green-light);
+    background: var(--white);
+    position: relative;
+  }
+
+  .review-card.correct-judge {
+    border-color: var(--green);
+    background: var(--green-bg);
+  }
+
+  .review-card.wrong-judge {
+    border-color: var(--red);
+    background: var(--red-bg);
+  }
+
+  .review-card .r-num {
+    font-size: 0.7rem;
+    color: var(--gray-400);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .review-card .r-expr {
+    font-size: 0.95rem;
+    font-family: "Courier New", monospace;
+    font-weight: 600;
+    color: #2e3a1f;
+    margin-bottom: 6px;
+    word-break: break-all;
+  }
+
+  .review-card .r-detail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 6px;
+    font-size: 0.78rem;
+  }
+
+  .review-card .r-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+
+  .r-tag.actual-correct { background: var(--green-light); color: var(--green); }
+  .r-tag.actual-wrong { background: var(--red-light); color: var(--red); }
+  .r-tag.you-correct { background: var(--green-light); color: var(--green); }
+  .r-tag.you-wrong { background: var(--red-light); color: var(--red); }
+  .r-tag.correct-answer { background: var(--gray-50); color: var(--gray-600); }
+
+  .result-actions {
+    text-align: center;
+    padding: 20px 0 40px;
+  }
+
+  @media (max-width: 600px) {
+    #startScreen h1 { font-size: 1.6rem; }
+    .q-expr { font-size: 1.2rem; }
+    .header h1 { font-size: 0.9rem; }
+    .footer-info { font-size: 0.8rem; }
+    .stats-row { gap: 6px; }
+    .stat-card { min-width: 90px; padding: 10px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <div class="logo">📝</div>
+  <h1>错题100道</h1>
+  <p class="subtitle">连加连减 · 1000以内 · 判断对错</p>
+
+  <div class="info-card">
+    <div class="info-row">
+      <span class="label">题目数量</span><span class="value">100 道</span>
+    </div>
+    <div class="info-row">
+      <span class="label">数字范围</span><span class="value">1000 以内</span>
+    </div>
+    <div class="info-row">
+      <span class="label">算式长度</span><span class="value">2个数 / 3个数 / 4个数</span>
+    </div>
+    <div class="info-row">
+      <span class="label">答题方式</span><span class="value">判断每道题的答案"对"还是"错"</span>
+    </div>
+    <div class="info-row">
+      <span class="label">提交规则</span><span class="value">全部做完才能查看答案</span>
+    </div>
+  </div>
+
+  <button class="btn-primary" onclick="startQuiz()">开始做题</button>
+</div>
+
+<div id="quizScreen">
+  <div class="header">
+    <div class="header-inner">
+      <h1>错题100道 · 1000以内</h1>
+      <div class="progress-wrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <span class="progress-text" id="progressText">0 / 100</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="questions-container">
+    <div class="num-count-label">
+      <span><span class="dot d2"></span> 2个数</span>
+      <span><span class="dot d3"></span> 3个数</span>
+      <span><span class="dot d4"></span> 4个数</span>
+      <span style="margin-left:8px;color:var(--gray-400)">题卡左侧色条标识</span>
+    </div>
+    <div class="questions-grid" id="questionsGrid"></div>
+  </div>
+
+  <div class="footer-bar">
+    <div class="footer-inner">
+      <div class="footer-info">
+        剩余 <span class="remaining" id="remaining">100</span> 题未作答
+      </div>
+      <button class="btn-submit" id="submitBtn" disabled onclick="submitQuiz()">
+        提交并查看答案
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="resultScreen">
+  <div class="result-header">
+    <div class="score-circle" id="scoreCircle">
+      <span class="score-num" id="scoreNum">0</span>
+      <span class="score-label">分</span>
+    </div>
+    <h2 id="resultTitle">答题完成！</h2>
+    <p class="score-subtitle" id="resultSubtitle"></p>
+  </div>
+
+  <div class="stats-row" id="statsRow"></div>
+
+  <div class="review-section">
+    <h3>
+      逐题回顾
+      <div class="filter-btns">
+        <button class="filter-btn active" onclick="setFilter('all', this)">全部</button>
+        <button class="filter-btn" onclick="setFilter('wrong', this)">只看错判</button>
+      </div>
+    </h3>
+    <div class="review-grid" id="reviewGrid"></div>
+  </div>
+
+  <div class="result-actions">
+    <button class="btn-primary" onclick="restart()">再来一组</button>
+  </div>
+</div>
+
+<script>
+let questions = [];
+let currentFilter = 'all';
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// ====== Generate 2-number questions ======
+function gen2Num() {
+  const v = Math.floor(Math.random() * 4);
+  let a, b;
+
+  // Use tiers for variety: small, medium, large
+  const tier = Math.random();
+  let aRange, bRange;
+  if (tier < 0.33)      { aRange = [10, 200];   bRange = [5, 150]; }
+  else if (tier < 0.66) { aRange = [100, 600];  bRange = [50, 400]; }
+  else                   { aRange = [300, 999];  bRange = [100, 700]; }
+
+  switch (v) {
+    case 0: // a + b
+      a = randInt(...aRange);
+      b = randInt(bRange[0], Math.min(bRange[1], 1000 - a));
+      return { expr: a + " + " + b, answer: a + b, nCount: 2 };
+    case 1: // a + b (again, common)
+      a = randInt(...aRange);
+      b = randInt(bRange[0], Math.min(bRange[1], 1000 - a));
+      return { expr: a + " + " + b, answer: a + b, nCount: 2 };
+    case 2: // a - b
+      a = randInt(...aRange);
+      b = randInt(bRange[0], Math.min(bRange[1], a - 1));
+      if (b < 1) b = 1;
+      return { expr: a + " - " + b, answer: a - b, nCount: 2 };
+    case 3: // a - b
+      a = randInt(Math.max(aRange[0], 50), aRange[1]);
+      b = randInt(bRange[0], Math.min(bRange[1], a - 1));
+      if (b < 1) b = 1;
+      return { expr: a + " - " + b, answer: a - b, nCount: 2 };
+  }
+}
+
+// ====== Generate 3-number questions ======
+function gen3Num() {
+  const v = Math.floor(Math.random() * 5);
+  let a, b, c;
+  const tier = Math.random();
+
+  if (v === 0 || v === 1) {
+    // 连加 a+b+c
+    if (tier < 0.4)      { a = randInt(10, 200);  b = randInt(10, 200);  c = randInt(5, 150); }
+    else if (tier < 0.7) { a = randInt(50, 400);  b = randInt(50, 350);  c = randInt(20, 250); }
+    else                  { a = randInt(100, 500); b = randInt(100, 400); c = randInt(30, 300); }
+    while (a + b + c > 1000) { c = randInt(5, Math.min(300, 1000 - a - b)); }
+    return { expr: a + " + " + b + " + " + c, answer: a + b + c, nCount: 3 };
+  }
+
+  if (v === 2) {
+    // 连减 a-b-c
+    a = randInt(200, 1000);
+    b = randInt(30, 400);
+    c = randInt(10, 250);
+    let tries = 0;
+    while (b + c >= a && tries < 30) { b = randInt(20, 300); c = randInt(10, 200); tries++; }
+    if (b + c >= a) { b = randInt(20, 100); c = randInt(10, Math.max(10, a - b - 1)); }
+    return { expr: a + " - " + b + " - " + c, answer: a - b - c, nCount: 3 };
+  }
+
+  if (v === 3) {
+    // a + b - c
+    a = randInt(50, 600);
+    b = randInt(50, 500);
+    c = randInt(10, Math.min(400, a + b - 1));
+    if (a + b - c > 1000) { c = a + b - 1000 + randInt(1, 50); }
+    return { expr: a + " + " + b + " - " + c, answer: a + b - c, nCount: 3 };
+  }
+
+  // v === 4: a - b + c
+  a = randInt(100, 800);
+  b = randInt(10, Math.min(500, a - 1));
+  c = randInt(10, Math.min(500, 1000 - a + b));
+  return { expr: a + " - " + b + " + " + c, answer: a - b + c, nCount: 3 };
+}
+
+// ====== Generate 4-number questions ======
+function gen4Num() {
+  const v = Math.floor(Math.random() * 4);
+  let a, b, c, d;
+  const tier = Math.random();
+
+  if (v === 0) {
+    // 连加 a+b+c+d
+    if (tier < 0.5) {
+      a = randInt(5, 150);  b = randInt(5, 150); c = randInt(5, 150); d = randInt(5, 150);
+    } else {
+      a = randInt(50, 300); b = randInt(50, 300); c = randInt(20, 200); d = randInt(20, 200);
+    }
+    while (a + b + c + d > 1000) {
+      a = randInt(5, 250); b = randInt(5, 250); c = randInt(5, 200); d = randInt(5, 150);
+    }
+    return { expr: a + " + " + b + " + " + c + " + " + d, answer: a + b + c + d, nCount: 4 };
+  }
+
+  if (v === 1) {
+    // 连减 a-b-c-d
+    a = randInt(300, 1000);
+    b = randInt(30, 300);
+    c = randInt(20, 200);
+    d = randInt(10, 150);
+    let tries = 0;
+    while (b + c + d >= a && tries < 30) {
+      b = randInt(20, 200); c = randInt(10, 150); d = randInt(5, 100);
+      tries++;
+    }
+    if (b + c + d >= a) { b = randInt(20, 100); c = randInt(10, 80); d = randInt(5, 50); }
+    if (b + c + d >= a) { d = Math.max(1, a - b - c - 1); }
+    return { expr: a + " - " + b + " - " + c + " - " + d, answer: a - b - c - d, nCount: 4 };
+  }
+
+  if (v === 2) {
+    // a + b + c - d
+    a = randInt(30, 400); b = randInt(30, 400); c = randInt(20, 300);
+    d = randInt(10, Math.min(300, a + b + c - 1));
+    if (a + b + c - d > 1000) { d = a + b + c - 1000 + randInt(1, 30); }
+    return { expr: a + " + " + b + " + " + c + " - " + d, answer: a + b + c - d, nCount: 4 };
+  }
+
+  // v === 3: a + b - c - d
+  a = randInt(100, 600); b = randInt(50, 500);
+  c = randInt(10, Math.min(400, a + b - 2));
+  d = randInt(10, Math.min(300, a + b - c - 1));
+  return { expr: a + " + " + b + " - " + c + " - " + d, answer: a + b - c - d, nCount: 4 };
+}
+
+// ====== Generate 100 Questions ======
+function generateQuestions() {
+  const list = [];
+
+  // Distribute: 28 two-num, 37 three-num, 35 four-num
+  const nCounts = [2, 3, 4];
+  const generators = { 2: gen2Num, 3: gen3Num, 4: gen4Num };
+  const targets = { 2: 28, 3: 37, 4: 35 };
+  const counts = { 2: 0, 3: 0, 4: 0 };
+
+  while (list.length < 100) {
+    // Pick type that hasn't met target yet
+    const available = nCounts.filter(n => counts[n] < targets[n]);
+    if (available.length === 0) break;
+    const nCount = available[Math.floor(Math.random() * available.length)];
+    const result = generators[nCount]();
+    list.push({
+      index: list.length,
+      expression: result.expr,
+      correctAnswer: result.answer,
+      shownAnswer: result.answer,
+      isWrong: false,
+      userChoice: null,
+      nCount: result.nCount
+    });
+    counts[nCount]++;
+  }
+
+  // Fill any remaining
+  while (list.length < 100) {
+    const nCount = nCounts[Math.floor(Math.random() * 3)];
+    const result = generators[nCount]();
+    list.push({
+      index: list.length,
+      expression: result.expr,
+      correctAnswer: result.answer,
+      shownAnswer: result.answer,
+      isWrong: false,
+      userChoice: null,
+      nCount: result.nCount
+    });
+  }
+
+  // Shuffle so types are mixed
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  // Re-index
+  list.forEach((q, i) => { q.index = i; });
+
+  // Random 15%-25% wrong answers
+  const wrongCount = randInt(15, 25);
+  const wrongSet = new Set();
+  while (wrongSet.size < wrongCount) {
+    wrongSet.add(Math.floor(Math.random() * 100));
+  }
+
+  list.forEach((q) => {
+    if (wrongSet.has(q.index)) {
+      let offset = randInt(1, 6);
+      if (q.correctAnswer > 500) offset = randInt(1, 12);
+      let wrong = q.correctAnswer + (Math.random() > 0.5 ? offset : -offset);
+      if (wrong === q.correctAnswer || wrong < 0) wrong = q.correctAnswer + offset;
+      q.shownAnswer = wrong;
+      q.isWrong = true;
+    }
+  });
+
+  return list;
+}
+
+// ====== Start Quiz ======
+function startQuiz() {
+  questions = generateQuestions();
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('quizScreen').style.display = 'block';
+  renderQuestions();
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+// ====== Render Questions ======
+function renderQuestions() {
+  const grid = document.getElementById('questionsGrid');
+  grid.innerHTML = '';
+
+  questions.forEach((q) => {
+    const card = document.createElement('div');
+    const nClass = 'num' + q.nCount;
+    card.className = 'q-card ' + nClass;
+    card.id = 'qcard-' + q.index;
+
+    card.innerHTML =
+      '<span class="q-num">' + (q.index + 1) + '</span>' +
+      '<div class="q-expr">' +
+        q.expression +
+        ' <span class="equals">=</span> ' +
+        '<span class="answer">' + q.shownAnswer + '</span>' +
+      '</div>' +
+      '<div class="q-buttons">' +
+        '<button class="q-btn" onclick="selectAnswer(' + q.index + ", 'correct'" + ')">对</button>' +
+        '<button class="q-btn" onclick="selectAnswer(' + q.index + ", 'wrong'" + ')">错</button>' +
+      '</div>';
+
+    grid.appendChild(card);
+  });
+}
+
+// ====== Select Answer ======
+function selectAnswer(qIndex, choice) {
+  questions[qIndex].userChoice = choice;
+
+  const card = document.getElementById('qcard-' + qIndex);
+  card.classList.add('answered');
+
+  const btns = card.querySelectorAll('.q-btn');
+  btns[0].classList.remove('selected-correct', 'selected-wrong');
+  btns[1].classList.remove('selected-correct', 'selected-wrong');
+
+  if (choice === 'correct') {
+    btns[0].classList.add('selected-correct');
+  } else {
+    btns[1].classList.add('selected-wrong');
+  }
+
+  updateProgress();
+}
+
+// ====== Update Progress ======
+function updateProgress() {
+  const answered = questions.filter(q => q.userChoice !== null).length;
+  const total = questions.length;
+  const remaining = total - answered;
+  const pct = (answered / total) * 100;
+
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = answered + ' / ' + total;
+  document.getElementById('remaining').textContent = remaining;
+
+  const submitBtn = document.getElementById('submitBtn');
+  if (answered === total) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '提交并查看答案';
+  } else {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '还需完成 ' + remaining + ' 题';
+  }
+}
+
+// ====== Submit ======
+function submitQuiz() {
+  if (!questions.every(q => q.userChoice !== null)) return;
+  document.getElementById('quizScreen').style.display = 'none';
+  document.getElementById('resultScreen').style.display = 'block';
+  renderResults();
+  window.scrollTo(0, 0);
+}
+
+// ====== Results ======
+function renderResults() {
+  let correctJudgments = 0, wrongJudgments = 0;
+  let caughtWrong = 0, missedWrong = 0, falseAlarm = 0;
+
+  questions.forEach(q => {
+    const userSaidWrong = (q.userChoice === 'wrong');
+    if (q.isWrong) {
+      if (userSaidWrong) { correctJudgments++; caughtWrong++; }
+      else { wrongJudgments++; missedWrong++; }
+    } else {
+      if (!userSaidWrong) { correctJudgments++; }
+      else { wrongJudgments++; falseAlarm++; }
+    }
+  });
+
+  const score = Math.round((correctJudgments / questions.length) * 100);
+
+  const circle = document.getElementById('scoreCircle');
+  const scoreNum = document.getElementById('scoreNum');
+  scoreNum.textContent = score;
+
+  const title = document.getElementById('resultTitle');
+  const subtitle = document.getElementById('resultSubtitle');
+
+  if (score >= 90) {
+    circle.style.borderColor = '#2e7d32'; scoreNum.style.color = '#2e7d32';
+    title.textContent = '太棒了！'; subtitle.textContent = '你的判断能力非常强！';
+  } else if (score >= 75) {
+    circle.style.borderColor = '#2e7d32'; scoreNum.style.color = '#2e7d32';
+    title.textContent = '做得不错！'; subtitle.textContent = '还有提升空间，继续练习。';
+  } else if (score >= 60) {
+    circle.style.borderColor = '#ef6c00'; scoreNum.style.color = '#ef6c00';
+    title.textContent = '继续努力！'; subtitle.textContent = '多练连加连减计算会越来越准确。';
+  } else {
+    circle.style.borderColor = '#c62828'; scoreNum.style.color = '#c62828';
+    title.textContent = '加油加油！'; subtitle.textContent = '先练习基础计算，再挑战判断对错。';
+  }
+
+  document.getElementById('statsRow').innerHTML =
+    statCard('green',  correctJudgments, '判断正确') +
+    statCard('red',    wrongJudgments,   '判断错误') +
+    statCard('blue',   caughtWrong,      '抓出错题') +
+    statCard('red',    missedWrong,      '漏判错题') +
+    statCard('gray',   falseAlarm,       '误判对题');
+
+  renderReview();
+}
+
+function statCard(color, num, label) {
+  return '<div class="stat-card ' + color + '">' +
+    '<div class="stat-num">' + num + '</div>' +
+    '<div class="stat-label">' + label + '</div></div>';
+}
+
+// ====== Review ======
+function renderReview() {
+  const grid = document.getElementById('reviewGrid');
+  grid.innerHTML = '';
+
+  let visible = 0;
+  questions.forEach(q => {
+    const userSaidWrong = (q.userChoice === 'wrong');
+    const judgedCorrectly = (userSaidWrong === q.isWrong);
+    if (currentFilter === 'wrong' && judgedCorrectly) return;
+    visible++;
+
+    const card = document.createElement('div');
+    card.className = 'review-card ' + (judgedCorrectly ? 'correct-judge' : 'wrong-judge');
+
+    const actualTag = q.isWrong
+      ? '<span class="r-tag actual-wrong">答案有错</span>'
+      : '<span class="r-tag actual-correct">答案正确</span>';
+
+    const youTag = userSaidWrong
+      ? '<span class="r-tag you-wrong">你选：错</span>'
+      : '<span class="r-tag you-correct">你选：对</span>';
+
+    card.innerHTML =
+      '<div class="r-num">第' + (q.index + 1) + '题 · ' + q.nCount + '数</div>' +
+      '<div class="r-expr">' + q.expression + ' = ' + q.shownAnswer + '</div>' +
+      '<div class="r-detail">' + actualTag + youTag +
+        '<span class="r-tag correct-answer">正确答案：' + q.correctAnswer + '</span>' +
+      '</div>';
+
+    grid.appendChild(card);
+  });
+
+  if (visible === 0) {
+    grid.innerHTML = '<p style="text-align:center;color:var(--gray-400);grid-column:1/-1;padding:20px;">没有错判，全��判断正确！</p>';
+  }
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderReview();
+}
+
+function restart() {
+  questions = [];
+  currentFilter = 'all';
+  document.getElementById('resultScreen').style.display = 'none';
+  document.getElementById('startScreen').style.display = 'flex';
+}
+</script>
+</body>
+</html>

@@ -67,6 +67,10 @@
       汉字拼音听写
     </button>
 
+    <a class="btn btn-secondary btn-block math-entry" :href="mathUrl" target="_blank" rel="noopener">
+      ➗ 口算练习（100题）
+    </a>
+
     <div style="display:flex;gap:10px;margin-top:4px">
       <button class="btn btn-secondary" style="flex:1" @click="$router.push('/errors')">
         📕 错题本
@@ -170,6 +174,8 @@ import { downloadAll, testPing } from '../fb.js'
 import { DICTIONARIES, WORD_MAP, getDictWords } from '../vocab.js'
 
 const router = useRouter()
+// 口算练习独立页面（public/cuoti-100.html，构建后在 /vocab-quiz/cuoti-100.html）
+const mathUrl = import.meta.env.BASE_URL + 'cuoti-100.html'
 const errorStats = ref([])
 const selectedDict = ref('core')
 const testingDB = ref(false)
@@ -428,6 +434,7 @@ async function confirmDelete(r) {
 .dict-row:active { background: rgba(0,122,255,0.03); }
 .planner-entry { margin-top: 0; color: #6E4B00; background: #FFF4D6; }
 .dictation-entry { margin-top: 0; color: #0A7A4B; background: #E8F8E8; }
+.math-entry { margin-top: 0; color: #1565C0; background: #E3F2FD; text-decoration: none; }
 .dict-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #C7C7CC; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
 .radio-on { border-color: var(--primary); background: var(--primary); }
 .radio-dot { width: 8px; height: 8px; border-radius: 50%; background: white; }
