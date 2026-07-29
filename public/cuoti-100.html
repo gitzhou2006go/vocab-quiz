@@ -562,6 +562,87 @@
     .stats-row { gap: 6px; }
     .stat-card { min-width: 90px; padding: 10px 12px; }
   }
+  .btn-secondary {
+    background: transparent;
+    color: var(--primary);
+    border: 1.5px solid var(--primary);
+    padding: 12px 36px;
+    font-size: 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    margin-top: 10px;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { background: var(--primary-bg); }
+
+  .btn-history {
+    margin-top: 1rem;
+    background: transparent;
+    color: var(--primary);
+    border: 1.5px solid var(--primary-light);
+    padding: 10px 28px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-history:hover { background: var(--primary-bg); }
+
+  .history-panel {
+    margin-top: 1rem;
+    max-width: 560px;
+    width: 100%;
+    background: var(--white);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 4px 16px rgba(46,125,50,0.08);
+    border: 1px solid var(--green-light);
+  }
+  .history-summary {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--green-light);
+  }
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .history-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--gray-50);
+    border-radius: 10px;
+    border: 1px solid var(--green-light);
+  }
+  .hr-date { font-weight: 700; color: var(--primary-dark); font-size: 0.9rem; }
+  .hr-meta { font-size: 0.75rem; color: var(--gray-500); margin-top: 2px; }
+  .hr-score { font-size: 1.4rem; font-weight: 800; color: var(--primary); white-space: nowrap; }
+  .hr-score span { font-size: 0.7rem; color: var(--gray-500); margin-left: 2px; }
+  .history-empty { text-align: center; color: var(--gray-400); padding: 16px; font-size: 0.85rem; }
+  .btn-clear-history {
+    margin-top: 12px;
+    width: 100%;
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--red-light);
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .btn-clear-history:hover { background: var(--red-bg); }
 </style>
 </head>
 <body>
@@ -590,6 +671,12 @@
   </div>
 
   <button class="btn-primary" onclick="startQuiz()">开始做题</button>
+
+  <button class="btn-history" onclick="toggleHistory()">📜 历史记录</button>
+  <div id="historyPanel" class="history-panel" style="display:none">
+    <div id="historyList"></div>
+    <button class="btn-clear-history" onclick="clearHistory()">清空历史</button>
+  </div>
 </div>
 
 <div id="quizScreen">
@@ -651,13 +738,17 @@
   </div>
 
   <div class="result-actions">
+    <p style="font-size:0.8rem;color:var(--gray-500);margin-bottom:12px">✅ 本次记录已保存到历史</p>
     <button class="btn-primary" onclick="restart()">再来一组</button>
+    <button class="btn-secondary" onclick="viewHistoryFromResult()">📜 查看历史记录</button>
   </div>
 </div>
 
 <script>
 let questions = [];
 let currentFilter = 'all';
+let startTime = 0;
+const HISTORY_KEY = 'cuoti100_history';
 
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -864,6 +955,7 @@ function generateQuestions() {
 // ====== Start Quiz ======
 function startQuiz() {
   questions = generateQuestions();
+  startTime = Date.now();
   document.getElementById('startScreen').style.display = 'none';
   document.getElementById('quizScreen').style.display = 'block';
   renderQuestions();
@@ -942,17 +1034,19 @@ function updateProgress() {
 // ====== Submit ======
 function submitQuiz() {
   if (!questions.every(q => q.userChoice !== null)) return;
+  const totalMs = Date.now() - startTime;
+  const record = buildRecord(totalMs);
+  saveHistory(record);
   document.getElementById('quizScreen').style.display = 'none';
   document.getElementById('resultScreen').style.display = 'block';
-  renderResults();
+  renderResults(record);
   window.scrollTo(0, 0);
 }
 
-// ====== Results ======
-function renderResults() {
+// ====== Build result record (含计时) ======
+function buildRecord(totalMs) {
   let correctJudgments = 0, wrongJudgments = 0;
   let caughtWrong = 0, missedWrong = 0, falseAlarm = 0;
-
   questions.forEach(q => {
     const userSaidWrong = (q.userChoice === 'wrong');
     if (q.isWrong) {
@@ -963,8 +1057,32 @@ function renderResults() {
       else { wrongJudgments++; falseAlarm++; }
     }
   });
+  const total = questions.length;
+  const score = Math.round((correctJudgments / total) * 100);
+  const avgMs = total ? totalMs / total : 0;
+  return {
+    date: Date.now(), total, score,
+    correctJudgments, wrongJudgments,
+    caughtWrong, missedWrong, falseAlarm,
+    totalMs, avgMs
+  };
+}
 
-  const score = Math.round((correctJudgments / questions.length) * 100);
+// ====== 时间格式化 ======
+function formatDuration(ms) {
+  const s = Math.round(ms / 1000);
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  if (m > 0) return m + '分' + String(sec).padStart(2, '0') + '秒';
+  return sec + '秒';
+}
+function formatAvg(ms) {
+  return (ms / 1000).toFixed(1) + '秒';
+}
+
+// ====== Results ======
+function renderResults(record) {
+  const score = record.score;
 
   const circle = document.getElementById('scoreCircle');
   const scoreNum = document.getElementById('scoreNum');
@@ -988,11 +1106,13 @@ function renderResults() {
   }
 
   document.getElementById('statsRow').innerHTML =
-    statCard('green',  correctJudgments, '判断正确') +
-    statCard('red',    wrongJudgments,   '判断错误') +
-    statCard('blue',   caughtWrong,      '抓出错题') +
-    statCard('red',    missedWrong,      '漏判错题') +
-    statCard('gray',   falseAlarm,       '误判对题');
+    statCard('green',  record.correctJudgments, '判断正确') +
+    statCard('red',    record.wrongJudgments,   '判断错误') +
+    statCard('blue',   record.caughtWrong,      '抓出错题') +
+    statCard('red',    record.missedWrong,      '漏判错题') +
+    statCard('gray',   record.falseAlarm,       '误判对题') +
+    statCard('blue',   formatDuration(record.totalMs), '总耗时') +
+    statCard('orange', formatAvg(record.avgMs),  '平均每题');
 
   renderReview();
 }
@@ -1053,6 +1173,68 @@ function restart() {
   currentFilter = 'all';
   document.getElementById('resultScreen').style.display = 'none';
   document.getElementById('startScreen').style.display = 'flex';
+}
+
+// ====== 历史记录（localStorage） ======
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch (e) { return []; }
+}
+
+function saveHistory(record) {
+  const list = loadHistory();
+  list.push(record);
+  if (list.length > 100) list.splice(0, list.length - 100); // 只保留最近 100 次
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+}
+
+function toggleHistory() {
+  const panel = document.getElementById('historyPanel');
+  const show = panel.style.display === 'none';
+  panel.style.display = show ? 'block' : 'none';
+  if (show) renderHistory();
+}
+
+function viewHistoryFromResult() {
+  document.getElementById('resultScreen').style.display = 'none';
+  document.getElementById('startScreen').style.display = 'flex';
+  document.getElementById('historyPanel').style.display = 'block';
+  renderHistory();
+  window.scrollTo(0, 0);
+}
+
+function renderHistory() {
+  const list = loadHistory();
+  const container = document.getElementById('historyList');
+  if (list.length === 0) {
+    container.innerHTML = '<p class="history-empty">还没有记录，做完一次就会出现在这里。</p>';
+    return;
+  }
+  const best = Math.max.apply(null, list.map(r => r.score));
+  const avgScore = Math.round(list.reduce((s, r) => s + r.score, 0) / list.length);
+  let html = '<div class="history-summary">共 ' + list.length + ' 次 · 最高 ' + best + ' 分 · 平均 ' + avgScore + ' 分</div>';
+  html += '<div class="history-list">';
+  list.slice().reverse().forEach(function (r) {
+    const d = new Date(r.date);
+    const dateStr = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    html +=
+      '<div class="history-row">' +
+        '<div class="hr-left">' +
+          '<div class="hr-date">' + dateStr + '</div>' +
+          '<div class="hr-meta">' + formatDuration(r.totalMs) + ' · ' + formatAvg(r.avgMs) + '/题 · 对' + r.correctJudgments + ' 错' + r.wrongJudgments + '</div>' +
+        '</div>' +
+        '<div class="hr-score">' + r.score + '<span>分</span></div>' +
+      '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function clearHistory() {
+  if (!confirm('确认清空所有历史记录？')) return;
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
 }
 </script>
 </body>
